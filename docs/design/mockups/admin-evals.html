@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JobCraft · Evals</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/theme.js"></script>
+  <link rel="stylesheet" href="assets/components.css" />
+</head>
+<body data-page="admin-evals" class="bg-zinc-50 text-zinc-900 font-sans">
+<div class="flex min-h-screen">
+  <aside id="sidebar" class="w-60 bg-white border-r border-zinc-200 fixed inset-y-0"></aside>
+  <main class="flex-1 ml-60">
+
+    <header class="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <div>
+        <h1 class="text-sm font-semibold">Evals</h1>
+        <p class="text-xs text-zinc-400">Prompt quality over time — CI fails if a suite drops below baseline</p>
+      </div>
+      <button class="btn btn-primary">Run all suites</button>
+    </header>
+
+    <div class="p-6 space-y-5">
+
+      <!-- Suite cards -->
+      <section class="grid grid-cols-3 gap-4">
+
+        <div class="bg-white border border-zinc-200 rounded-xl p-4">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">resume_quality_v1</div>
+              <div class="num text-2xl font-semibold mt-1">0.83</div>
+              <div class="flex items-center gap-1 mt-1">
+                <span class="text-xs text-emerald-600 font-semibold">↑ +0.08</span>
+                <span class="text-xs text-zinc-400">vs baseline 0.70</span>
+              </div>
+            </div>
+            <span class="chip chip-high self-start">pass</span>
+          </div>
+          <div class="text-xs text-zinc-400 mt-3 mb-2">50 cases · last run 09:41</div>
+          <div class="flex items-end gap-1 h-8">
+            <div class="flex-1 rounded-sm" style="height:60%;background:#a7f3d0"></div>
+            <div class="flex-1 rounded-sm" style="height:68%;background:#6ee7b7"></div>
+            <div class="flex-1 rounded-sm" style="height:75%;background:#34d399"></div>
+            <div class="flex-1 rounded-sm" style="height:83%;background:#10b981"></div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-zinc-200 rounded-xl p-4">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">extraction_accuracy_v1</div>
+              <div class="num text-2xl font-semibold mt-1">0.91</div>
+              <div class="flex items-center gap-1 mt-1">
+                <span class="text-xs text-emerald-600 font-semibold">↑ +0.06</span>
+                <span class="text-xs text-zinc-400">vs baseline 0.85</span>
+              </div>
+            </div>
+            <span class="chip chip-high self-start">pass</span>
+          </div>
+          <div class="text-xs text-zinc-400 mt-3 mb-2">40 cases · last run 09:41</div>
+          <div class="flex items-end gap-1 h-8">
+            <div class="flex-1 rounded-sm" style="height:75%;background:#6ee7b7"></div>
+            <div class="flex-1 rounded-sm" style="height:82%;background:#34d399"></div>
+            <div class="flex-1 rounded-sm" style="height:88%;background:#10b981"></div>
+            <div class="flex-1 rounded-sm" style="height:91%;background:#059669"></div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-zinc-200 rounded-xl p-4" style="border-color:#fecdd3">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">match_consistency_v1</div>
+              <div class="num text-2xl font-semibold mt-1 text-rose-600">0.66</div>
+              <div class="flex items-center gap-1 mt-1">
+                <span class="text-xs text-rose-600 font-semibold">↓ −0.04</span>
+                <span class="text-xs text-zinc-400">vs baseline 0.70 ⚠</span>
+              </div>
+            </div>
+            <span class="chip chip-low self-start">fail</span>
+          </div>
+          <div class="text-xs text-zinc-400 mt-3 mb-2">30 cases · last run 09:41</div>
+          <div class="flex items-end gap-1 h-8">
+            <div class="flex-1 rounded-sm" style="height:72%;background:#fcd34d"></div>
+            <div class="flex-1 rounded-sm" style="height:70%;background:#fbbf24"></div>
+            <div class="flex-1 rounded-sm" style="height:68%;background:#f59e0b"></div>
+            <div class="flex-1 rounded-sm" style="height:66%;background:#f43f5e"></div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Recent runs -->
+      <section class="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+        <div class="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+          <h2 class="text-sm font-semibold">Recent runs</h2>
+          <span class="text-xs text-zinc-400">1 failing suite needs attention</span>
+        </div>
+        <table class="w-full text-sm">
+          <thead class="bg-zinc-50/80 text-zinc-500 text-xs border-b border-zinc-100">
+            <tr class="text-left">
+              <th class="px-4 py-2.5 font-medium">Suite</th>
+              <th class="px-2 py-2.5 font-medium">Prompt version</th>
+              <th class="px-2 py-2.5 font-medium"><span class="model-badge model-opus">Model</span></th>
+              <th class="px-2 py-2.5 font-medium text-right">Score</th>
+              <th class="px-2 py-2.5 font-medium text-right">Δ vs prev</th>
+              <th class="px-2 py-2.5 font-medium">Result</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-zinc-100">
+
+            <tr class="data-row">
+              <td class="px-4 py-2.5 font-medium text-zinc-800">resume_quality_v1</td>
+              <td class="px-2 py-2.5"><span class="source-pill">resume_generation_v3</span></td>
+              <td class="px-2 py-2.5"><span class="model-badge model-opus">Opus 4.8</span></td>
+              <td class="px-2 py-2.5 num text-right font-semibold">0.83</td>
+              <td class="px-2 py-2.5 num text-right text-emerald-600 font-semibold">+0.08</td>
+              <td class="px-2 py-2.5"><span class="badge badge-submitted"><span class="dot bg-emerald-500"></span>pass</span></td>
+            </tr>
+
+            <tr class="data-row">
+              <td class="px-4 py-2.5 font-medium text-zinc-800">extraction_accuracy_v1</td>
+              <td class="px-2 py-2.5"><span class="source-pill">extract_job_v2</span></td>
+              <td class="px-2 py-2.5"><span class="model-badge model-haiku">Haiku 4.5</span></td>
+              <td class="px-2 py-2.5 num text-right font-semibold">0.91</td>
+              <td class="px-2 py-2.5 num text-right text-emerald-600 font-semibold">+0.06</td>
+              <td class="px-2 py-2.5"><span class="badge badge-submitted"><span class="dot bg-emerald-500"></span>pass</span></td>
+            </tr>
+
+            <tr class="data-row" style="background:#fff1f2">
+              <td class="px-4 py-2.5 font-medium text-zinc-800">match_consistency_v1</td>
+              <td class="px-2 py-2.5"><span class="source-pill">match_score_v2</span></td>
+              <td class="px-2 py-2.5"><span class="model-badge model-sonnet">Sonnet 4.6</span></td>
+              <td class="px-2 py-2.5 num text-right font-semibold text-rose-600">0.66</td>
+              <td class="px-2 py-2.5 num text-right text-rose-600 font-semibold">−0.04</td>
+              <td class="px-2 py-2.5"><span class="badge badge-failed"><span class="dot bg-rose-500"></span>fail · below baseline</span></td>
+            </tr>
+
+          </tbody>
+        </table>
+      </section>
+
+    </div>
+  </main>
+</div>
+<script src="assets/layout.js"></script>
+</body>
+</html>

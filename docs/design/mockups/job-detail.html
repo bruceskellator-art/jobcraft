@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JobCraft · Job detail</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/theme.js"></script>
+  <link rel="stylesheet" href="assets/components.css" />
+</head>
+<body data-page="jobs" class="bg-zinc-50 text-zinc-900 font-sans">
+<div class="flex min-h-screen">
+  <aside id="sidebar" class="w-60 bg-white border-r border-zinc-200 fixed inset-y-0"></aside>
+  <main class="flex-1 ml-60">
+
+    <header class="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <div class="flex items-center gap-3">
+        <a href="jobs.html" class="text-zinc-400 hover:text-zinc-700 text-sm">← Jobs</a>
+        <div class="flex items-center gap-2.5">
+          <div class="logo-avatar" style="background:#ede9fe;color:#5b21b6">ST</div>
+          <div>
+            <h1 class="text-sm font-semibold">Forward Deployed Engineer</h1>
+            <p class="text-xs text-zinc-400">Stripe · Singapore · Hybrid · <span class="source-pill">GH</span> · posted 1d ago</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-ghost">Generate resume + cover letter</button>
+        <a href="apply-queue.html" class="btn btn-primary">Add to apply queue</a>
+      </div>
+    </header>
+
+    <div class="p-6 grid grid-cols-3 gap-6">
+
+      <!-- Left: match + extraction -->
+      <div class="col-span-2 space-y-5">
+
+        <!-- Match -->
+        <section class="bg-white border border-zinc-200 rounded-xl">
+          <div class="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+            <h2 class="text-sm font-semibold">Match breakdown</h2>
+            <span class="chip chip-high">0.89 overall</span>
+          </div>
+          <div class="p-4 grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+            <div>
+              <div class="flex justify-between mb-1.5"><span class="text-zinc-600">Skills</span><span class="num font-semibold text-emerald-600">0.92</span></div>
+              <div class="h-1.5 rounded-full bg-zinc-100"><div class="h-full rounded-full bg-emerald-500" style="width:92%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1.5"><span class="text-zinc-600">Seniority</span><span class="num font-semibold text-emerald-600">0.88</span></div>
+              <div class="h-1.5 rounded-full bg-zinc-100"><div class="h-full rounded-full bg-emerald-500" style="width:88%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1.5"><span class="text-zinc-600">Domain</span><span class="num font-semibold text-amber-600">0.71</span></div>
+              <div class="h-1.5 rounded-full bg-zinc-100"><div class="h-full rounded-full bg-amber-500" style="width:71%"></div></div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1.5"><span class="text-zinc-600">Culture fit</span><span class="num font-semibold text-emerald-600">0.85</span></div>
+              <div class="h-1.5 rounded-full bg-zinc-100"><div class="h-full rounded-full bg-emerald-500" style="width:85%"></div></div>
+            </div>
+          </div>
+          <div class="px-4 pb-4">
+            <div class="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wide">Gaps to address</div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="skill-tag" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa">Kubernetes <span class="text-xs opacity-60 ml-1">medium</span></span>
+              <span class="skill-tag" style="background:#fff1f2;color:#be123c;border-color:#fecdd3">Customer SaaS <span class="text-xs opacity-60 ml-1">high</span></span>
+              <span class="skill-tag skill-gen">Terraform <span class="text-xs opacity-60 ml-1">low</span></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Extraction -->
+        <section class="bg-white border border-zinc-200 rounded-xl">
+          <div class="px-4 py-3 border-b border-zinc-200 flex items-center gap-2">
+            <h2 class="text-sm font-semibold">Extracted from listing</h2>
+            <span class="source-pill">Greenhouse</span>
+          </div>
+          <div class="p-4 text-sm space-y-4">
+            <p class="text-zinc-600 leading-relaxed">Deploy and integrate Stripe's platform directly with strategic enterprise customers across SEA; act as the technical bridge between product and field.</p>
+            <div>
+              <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">Required skills</div>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="skill-tag skill-be">Python</span>
+                <span class="skill-tag skill-be">APIs / integrations</span>
+                <span class="skill-tag skill-fe">React</span>
+                <span class="skill-tag skill-gen">Customer-facing</span>
+                <span class="skill-tag skill-gen">5+ yrs exp</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-6">
+              <div>
+                <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">Salary (extracted)</div>
+                <div class="num font-semibold text-zinc-800">SGD 9,000 – 13,000 / mo</div>
+              </div>
+              <div>
+                <div class="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">Work arrangement</div>
+                <div class="text-sm text-zinc-700">Hybrid · Singapore</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Right: tailored resume groundedness -->
+      <div class="space-y-5">
+        <section class="bg-white border border-zinc-200 rounded-xl">
+          <div class="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-semibold">Tailored résumé</h2>
+              <p class="text-xs text-zinc-400 mt-0.5">resume_generation_v3</p>
+            </div>
+            <span class="chip chip-high">0.97</span>
+          </div>
+          <div class="p-4 text-sm space-y-3">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="text-zinc-400">Groundedness — claim → corpus</span>
+              <span class="chip chip-high" style="min-width:auto;padding:0.1rem 0.4rem;font-size:0.65rem">grounded</span>
+            </div>
+            <div class="border-l-2 border-emerald-400 pl-3 py-0.5">
+              <p class="text-zinc-700">Built B2C booking integrations at Traveloka serving 40M+ users.</p>
+              <a href="experience.html" class="text-xs text-emerald-600 mt-0.5 block flex items-center gap-1">
+                <span class="num">exp_8821</span> · Traveloka →
+              </a>
+            </div>
+            <div class="border-l-2 border-emerald-400 pl-3 py-0.5">
+              <p class="text-zinc-700">Shipped Python services with async API design.</p>
+              <a href="experience.html" class="text-xs text-emerald-600 mt-0.5 block">
+                <span class="num">exp_8830</span> · Traveloka →
+              </a>
+            </div>
+            <div class="border-l-2 border-rose-400 pl-3 py-0.5 bg-rose-50/60 rounded-r">
+              <p class="text-zinc-700">Led enterprise customer onboarding.</p>
+              <span class="text-xs text-rose-600 mt-0.5 block">⚠ no source — review or remove</span>
+            </div>
+          </div>
+          <div class="px-4 pb-4 flex gap-2">
+            <button class="btn btn-ghost flex-1">Edit</button>
+            <button class="btn btn-primary flex-1">Export PDF</button>
+          </div>
+        </section>
+
+        <!-- Cover letter preview -->
+        <section class="bg-white border border-zinc-200 rounded-xl">
+          <div class="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-semibold">Cover letter</h2>
+              <p class="text-xs text-zinc-400 mt-0.5">cover_letter_v2</p>
+            </div>
+            <span class="chip chip-high">1.00</span>
+          </div>
+          <div class="p-4 text-xs text-zinc-500 leading-relaxed">
+            Dear Stripe hiring team,<br /><br />
+            I'm drawn to the Forward Deployed Engineer role because it sits at exactly the intersection I've spent the last few years building toward…
+            <span class="text-zinc-300"> [truncated]</span>
+          </div>
+          <div class="px-4 pb-4 flex gap-2">
+            <button class="btn btn-ghost flex-1">Edit</button>
+            <button class="btn btn-primary flex-1">Export PDF</button>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="assets/layout.js"></script>
+</body>
+</html>

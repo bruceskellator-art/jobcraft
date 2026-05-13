@@ -1,7 +1,7 @@
 # JobCraft — Design Specification
 
-**Date:** 2026-06-22
-**Status:** Draft v1
+**Date:** 2026-06-24
+**Status:** Draft v2
 **Author:** Bruce Ong
 
 ---
@@ -12,19 +12,23 @@
 
 JobCraft is an AI-powered job targeting and resume optimization system. Given a user's experience corpus and a set of job preferences (filters or natural language description), it:
 
-1. Scrapes job listings from multiple sources
+1. Scrapes job listings from multiple sources (Singapore-focused: MyCareersFuture, ATS boards, LinkedIn, regional tech boards)
 2. Analyzes each job description to extract required skills, seniority, and culture signals
 3. Scores the user's existing experience against each job
 4. Identifies skill gaps and surfaces actionable insights
 5. Generates a tailored resume and cover letter for each role
-6. Tracks applications through a pipeline dashboard
-7. (Optional, manual) Assists with — not automates — application submission
+6. **Auto-applies at scale** — fills application forms with an LLM field-mapping agent, auto-submits where it is confident and safe, and queues the rest for fast batch review
+7. Tracks applications through a pipeline dashboard
+8. **Auto-syncs application status from email** *(v2)* — connects to the user's inbox (read-only), matches recruiter emails to applications, and uses an LLM classifier to advance the pipeline (acknowledged → screen → interview → offer / rejected) so the board stays current without manual dragging
 
 ### 1.2 What JobCraft Is Not
 
-- **Not a fully automated submitter.** Auto-submission is ethically gray and often violates ToS. JobCraft generates artifacts and prepares applications, but the user reviews and submits.
+- **Not a spray-and-pray spammer.** Auto-apply is a *first-class* feature, but every application is still tailored (grounded resume + cover letter per role) and gated by a fit threshold. Volume comes from automation, not from lowering quality.
+- **Not a CAPTCHA farm or a ToS-evasion tool.** JobCraft does not solve CAPTCHAs or defeat bot-detection. Where a site hard-blocks automation, the application falls back to the human review queue. See §9 for the ToS/account-risk posture.
 - **Not a job board.** It aggregates from existing sources; it does not host listings.
 - **Not a general-purpose resume builder.** It is a *targeted* resume optimizer — every output is for a specific job.
+
+> **Single-user, personal-use tool.** JobCraft applies to jobs *on behalf of its own operator*, using the operator's own accounts, credentials, and truthful profile data. It is not a service that applies on behalf of third parties.
 
 ### 1.3 Why This Project Exists
 
@@ -40,6 +44,8 @@ Two parallel goals:
 - The system surfaces 3+ concrete skill gaps per job that the user can act on.
 - All AI-generated artifacts are reproducible: same job + same user corpus + same prompt version = same output (modulo LLM temperature).
 - The eval suite proves resume quality across at least 50 test cases.
+- The user can queue 100+ tailored applications and clear the entire review queue in under 15 minutes, with the safe majority auto-submitted and only ambiguous applications surfaced.
+- No application is ever submitted with an invented answer to a knockout question (work authorization, visa status, years of experience).
 
 ---
 
@@ -86,6 +92,8 @@ Two parallel goals:
 | **Extractor** | Parse raw HTML/text into structured `JobPosting` records using LLM structured outputs. |
 | **Matcher** | Score user fit against a `JobPosting`. Uses embeddings + LLM-as-judge. |
 | **Generator** | Produce tailored resume + cover letter Markdown + PDF for a job. RAG-driven. |
+| **Apply Engine** | Drive application forms via browser automation. LLM field-mapping agent fills fields from the profile + answer bank + generated artifacts; a confidence gate auto-submits safe/high-confidence applications and queues the rest for review. Rate-limited per source. |
+| **Email Status Tracker** *(v2)* | Connect to the user's inbox read-only; match recruiter emails to applications; LLM-classify each into a status event and advance the pipeline (with a confirmation step for low-confidence transitions). |
 | **Eval Runner** | Run prompt suites against historical jobs to measure quality, track regression. |
 | **Storage Layer** | Postgres for relational state, Qdrant for vector search, filesystem for artifacts. |
 | **Observability** | Capture every LLM call (input, output, model, latency, cost) for debugging and analysis. |
@@ -133,7 +141,7 @@ CREATE TABLE experience_items (
 -- Scraped jobs
 CREATE TABLE job_postings (
   id UUID PRIMARY KEY,
-  source TEXT NOT NULL,          -- 'linkedin', 'greenhouse', 'lever', 'wellfound'
+  source TEXT NOT NULL,          -- 'mycareersfuture', 'greenhouse', 'lever', 'ashby', 'linkedin', 'glints', 'nodeflair', 'serpapi'
   source_url TEXT NOT NULL,
   source_id TEXT,                -- Source's own ID, for dedup
   company TEXT NOT NULL,
@@ -164,12 +172,14 @@ CREATE TABLE matches (
 CREATE TABLE artifacts (
   id UUID PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES users(id),
-  job_id UUID NOT NULL REFERENCES job_postings(id),
+  job_id UUID REFERENCES job_postings(id),  -- NULL for the uploaded baseline résumé
   kind TEXT NOT NULL CHECK (kind IN ('resume', 'cover_letter')),
   format TEXT NOT NULL CHECK (format IN ('markdown', 'pdf', 'html')),
   content TEXT NOT NULL,         -- Or filesystem path for PDF
-  prompt_version_id UUID NOT NULL,
-  generation_run_id UUID NOT NULL,
+  is_baseline BOOLEAN DEFAULT FALSE, -- the user's uploaded résumé; the "before" baseline
+  scores JSONB,                  -- per-criteria scores, e.g. {fit, groundedness, ats_keywords, quantified_impact, clarity} each 0..1
+  prompt_version_id UUID,        -- NULL for the uploaded baseline
+  generation_run_id UUID,        -- NULL for the uploaded baseline
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -179,15 +189,113 @@ CREATE TABLE applications (
   user_id UUID NOT NULL REFERENCES users(id),
   job_id UUID NOT NULL REFERENCES job_postings(id),
   status TEXT NOT NULL CHECK (status IN (
-    'interested', 'preparing', 'submitted', 'phone_screen',
-    'technical', 'onsite', 'offer', 'rejected', 'withdrawn'
+    -- discovery + auto-apply lifecycle
+    'interested', 'queued', 'auto_filling', 'needs_review', 'submitted',
+    'blocked', 'failed',
+    -- post-submission pipeline
+    'phone_screen', 'technical', 'onsite', 'offer', 'rejected', 'withdrawn'
   )),
+  apply_mode TEXT CHECK (apply_mode IN ('auto', 'assisted', 'manual')),
+  apply_confidence FLOAT,        -- 0..1 from the field-mapping agent
+  blocked_reason TEXT,           -- 'captcha', 'login_required', 'unknown_question', ...
   notes TEXT,
   resume_artifact_id UUID REFERENCES artifacts(id),
   cover_letter_artifact_id UUID REFERENCES artifacts(id),
   submitted_at TIMESTAMPTZ,
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Reusable profile fields used to fill application forms.
+-- Holds the user's TRUE answers; the agent never invents these.
+CREATE TABLE profile_fields (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  key TEXT NOT NULL,             -- 'work_authorization', 'notice_period', 'salary_expectation_sgd', 'phone'
+  value TEXT NOT NULL,
+  is_knockout BOOLEAN DEFAULT FALSE, -- work auth / visa / eligibility: pinned, never auto-guessed
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (user_id, key)
+);
+
+-- Answer bank: reusable answers to free-text screening questions.
+-- Drafts are LLM-generated, approved once by the user, then reused by similarity.
+CREATE TABLE answer_bank (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  question TEXT NOT NULL,        -- canonical screening question
+  answer TEXT NOT NULL,
+  approved BOOLEAN DEFAULT FALSE, -- only approved answers may be auto-submitted
+  reuse_count INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+-- Embedded in Qdrant (collection `answer_bank`) for similarity reuse across forms.
+
+-- One row per attempt to apply to a job (auditable, replayable).
+CREATE TABLE application_attempts (
+  id UUID PRIMARY KEY,
+  application_id UUID NOT NULL REFERENCES applications(id),
+  strategy TEXT NOT NULL,        -- 'linkedin_easy_apply', 'greenhouse_form', 'mycareersfuture', 'generic_form'
+  field_map JSONB NOT NULL,      -- [{field, value, source, confidence}]
+  overall_confidence FLOAT NOT NULL,
+  outcome TEXT NOT NULL CHECK (outcome IN ('submitted', 'queued', 'blocked', 'failed')),
+  blocked_reason TEXT,
+  screenshot_path TEXT,          -- evidence of submitted/blocked state
+  attempted_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ── Email status sync (v2) ──────────────────────────────────────────
+-- A connected inbox. Tokens are stored ENCRYPTED, never plaintext.
+CREATE TABLE email_accounts (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  provider TEXT NOT NULL CHECK (provider IN ('gmail', 'outlook')),
+  email_address TEXT NOT NULL,
+  oauth_token_enc BYTEA NOT NULL,   -- encrypted refresh/access token bundle
+  scopes TEXT[] NOT NULL,           -- read-only scopes only, e.g. gmail.readonly
+  sync_cursor TEXT,                 -- Gmail historyId / Graph deltaLink for incremental sync
+  watch_expires_at TIMESTAMPTZ,     -- Gmail watch / Graph subscription expiry (renew before)
+  connected_at TIMESTAMPTZ DEFAULT NOW(),
+  last_synced_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused', 'reauth_required', 'revoked')),
+  UNIQUE (user_id, email_address)
+);
+
+-- A recruiter/company email we matched to an application. We store metadata +
+-- a redacted snippet for the audit trail, not the full mailbox.
+CREATE TABLE email_messages (
+  id UUID PRIMARY KEY,
+  email_account_id UUID NOT NULL REFERENCES email_accounts(id),
+  application_id UUID REFERENCES applications(id), -- NULL until matched
+  provider_message_id TEXT NOT NULL,  -- Gmail/Graph message id (idempotency)
+  thread_id TEXT,
+  from_address TEXT NOT NULL,
+  from_domain TEXT NOT NULL,          -- matched against the application's company domain
+  subject TEXT,
+  snippet TEXT,                       -- short preview only; full body fetched transiently, not persisted
+  received_at TIMESTAMPTZ NOT NULL,
+  match_method TEXT,                  -- 'domain', 'thread', 'ats_sender', 'llm'
+  match_confidence FLOAT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (email_account_id, provider_message_id)
+);
+
+-- An inferred status transition proposed (or applied) from an email.
+-- Low-confidence transitions require user confirmation before they touch the app.
+CREATE TABLE status_events (
+  id UUID PRIMARY KEY,
+  application_id UUID NOT NULL REFERENCES applications(id),
+  email_message_id UUID REFERENCES email_messages(id), -- source; NULL if manual
+  from_status TEXT,
+  to_status TEXT NOT NULL,            -- one of applications.status values
+  classification TEXT NOT NULL,       -- 'acknowledged','assessment','phone_screen','technical','onsite','offer','rejected','ghosted_followup','other'
+  confidence FLOAT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'proposed' CHECK (state IN ('proposed', 'applied', 'dismissed')),
+  prompt_version_id UUID REFERENCES prompt_versions(id), -- the classifier prompt
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ
+);
+CREATE INDEX status_events_pending ON status_events (application_id) WHERE state = 'proposed';
 
 -- Prompt versioning — every prompt has a stable identifier
 CREATE TABLE prompt_versions (
@@ -241,6 +349,7 @@ Two collections:
 |---|---|---|
 | `user_experience` | Embedded `experience_items.content` per user | Resume generation RAG, gap detection |
 | `job_postings` | Embedded JD `description` + `requirements` | Semantic job search, similar-job retrieval |
+| `answer_bank` | Embedded screening `question` per user | Reuse approved answers across application forms by similarity |
 
 Both collections use OpenAI `text-embedding-3-small` (1536 dim) by default. Embedding model is configurable.
 
@@ -267,11 +376,20 @@ data/
 
 **Purpose:** Fetch job listings from multiple sources reliably.
 
-**Sources (priority order):**
-1. **Greenhouse** — many AI companies (Anthropic, OpenAI use Greenhouse). Well-structured HTML, easy to parse.
-2. **Lever** — also common for AI startups. Similar structure to Greenhouse.
-3. **Wellfound (AngelList)** — startup-focused, good for FDE roles at smaller companies.
-4. **LinkedIn** — high coverage but harder to scrape; defer to v2.
+**Sources (Singapore-focused, priority order):**
+
+*Tier 1 — compliant, structured, reliable (the foundation; the app always works on these):*
+1. **MyCareersFuture.gov.sg** — Singapore government (Workforce Singapore) portal. Best SG coverage, free JSON API (`api.mycareersfuture.gov.sg`), no auth, structured. The primary SG source.
+2. **Greenhouse / Lever / Ashby** — official public job-board JSON APIs. Covers most tech companies hiring in SG (Stripe, ByteDance, etc.). No scraping — documented endpoints.
+
+*Tier 2 — best-effort, high value, expect breakage (never the foundation):*
+3. **LinkedIn** — excellent SG coverage. Scraped via Playwright using a **dedicated, disposable** logged-in session at low rate. Violates LinkedIn ToS and the account may be restricted — treated as a bonus adapter that is expected to break and rotate, never a dependency. See §9.
+4. **Glints / NodeFlair** — SEA / SG tech-focused boards.
+
+*Tier 3 — optional, paid aggregator:*
+5. **SerpAPI (Google Jobs endpoint)** — returns the "Google for Jobs" results as clean JSON (Google itself offers no free jobs API; its old Cloud Talent Solution search was discontinued). Paid; enable if Tier 1–2 coverage is insufficient.
+
+> **Note on Adzuna and global aggregators:** evaluated and **dropped for SG** — their Singapore coverage is thin. SG coverage comes from MyCareersFuture + LinkedIn + ATS boards instead.
 
 **Design:**
 - Each source has its own adapter implementing `JobSource` protocol:
@@ -395,6 +513,23 @@ class StyleConfig(BaseModel):
     emphasis: list[str] = []  # e.g., ["leadership", "AI work"]
 ```
 
+**Artifact scoring & baseline comparison.** Every generated résumé/cover letter is
+scored across a fixed rubric and stored on `artifacts.scores`:
+
+```python
+class ArtifactScores(BaseModel):
+    fit: float               # alignment to this job's requirements (reuses match)
+    groundedness: float      # share of claims traceable to experience items
+    ats_keywords: float      # coverage of the JD's required keywords
+    quantified_impact: float # share of bullets with concrete/measured outcomes
+    clarity: float           # readability / length discipline
+```
+
+The user's **uploaded résumé is stored as a baseline artifact** (`is_baseline = true`,
+`job_id = NULL`) and scored on the same rubric, so the **Documents** view shows
+before → after improvement per criterion (the `vs baseline` delta). This makes the
+value of the tool measurable and is a concrete demo artifact.
+
 ### 4.5 Eval Runner
 
 **Purpose:** Prove that generation and matching prompts work, and catch regressions when prompts change.
@@ -479,6 +614,173 @@ class LLMClient:
 
 This is genuinely useful operationally *and* a great interview talking point.
 
+### 4.8 Apply Engine
+
+**Purpose:** Eliminate the hours of manual clicking. Apply to many jobs through a
+single review surface — the user never touches a job board's UI. This is the
+feature the product is organized around.
+
+**The problem shape.** Applications are web forms of varying difficulty:
+
+| Tier | Example | Automatable? |
+|---|---|---|
+| 1-click / Easy Apply | LinkedIn Easy Apply, some MyCareersFuture | Yes — short modal |
+| Known ATS templates | Greenhouse, Lever, Ashby hosted forms | Yes — predictable fields |
+| Arbitrary career pages | Bespoke company forms | Mostly — each differs |
+| Enterprise ATS | Workday, Taleo, iCIMS | Painful → `assisted` |
+| CAPTCHA-gated | reCAPTCHA, bot walls | No → `blocked`, hard stop |
+
+**Three parts:**
+
+1. **Browser automation (Playwright).** Drives a real browser per application,
+   using the user's own logged-in session for sites that require it. Rate-limited
+   per source (applying to hundreds in minutes is itself a ban signal).
+
+2. **LLM field-mapping agent.** The portfolio-worthy core:
+   ```
+   For each queued application:
+     1. Render the form → extract fields (labels, types, options)
+     2. LLM maps each field → value, drawing from:
+          • profile_fields   (name, email, phone, work auth, notice, salary)
+          • answer_bank       (approved reusable screening answers, by similarity)
+          • the tailored cover letter / corpus (free-text "why this role")
+     3. Attach the generated resume + cover letter PDF
+     4. Emit per-field + overall confidence
+   ```
+
+3. **Confidence gate.** Decides per application:
+   - **Auto-submit** when confidence is high AND the form is safe (Easy Apply,
+     known ATS, no unresolved knockout question).
+   - **Queue for review** otherwise (unknown screening question, low confidence,
+     enterprise ATS) → surfaces in the Apply Queue as a uniform field-map card.
+   - **Block** on CAPTCHA / bot-detection → never bypassed; routed to manual.
+
+**Autopilot config (per source, user-controlled):**
+```python
+class AutopilotConfig(BaseModel):
+    mode: Literal["off", "selective", "full"] = "selective"
+    auto_submit_sources: list[str] = ["linkedin_easy_apply", "mycareersfuture"]
+    min_confidence: float = 0.75   # below this → review queue regardless
+    min_fit: float = 0.55          # never auto-apply below this match score
+    daily_cap: int = 80            # rate-limit / ban-avoidance
+```
+
+**`ApplyStrategy` protocol** (one adapter per platform, parallels `JobSource`):
+```python
+class ApplyStrategy(Protocol):
+    name: str
+    can_handle: Callable[[JobPosting], bool]
+    async def fill(self, app: Application, ctx: ApplyContext) -> FieldMap: ...
+    async def submit(self, app: Application, field_map: FieldMap) -> ApplyOutcome: ...
+```
+
+**Hard safety rules (enforced, not advisory):**
+- **Knockout fields are pinned and never auto-filled with invented values.** Work
+  authorization, visa status, citizenship, and years-of-experience come only from
+  `profile_fields` (the user's true answers). If missing, the application is
+  queued — never guessed. Critical in SG (work-pass questions are common and
+  consequential).
+- **No CAPTCHA solving.** No third-party solving services, no bot-detection
+  evasion. Blocked → manual.
+- **Approved answers only.** Only `answer_bank` rows the user has approved may be
+  auto-submitted; unapproved drafts force review.
+- **Per-source rate limits + daily cap** to avoid account bans.
+
+**Workers** run on `arq` (Redis), already in the stack. Every attempt writes an
+`application_attempts` row (field map, confidence, outcome, screenshot) for audit
+and replay.
+
+### 4.9 Email Status Tracker *(v2)*
+
+**Purpose:** Keep the Applications board current automatically. After you apply,
+recruiters reply by email — acknowledgements, screen invites, assessments,
+rejections, offers. Manually dragging cards across the Kanban is exactly the kind
+of repetitive work JobCraft exists to remove. This component reads those emails
+and advances the pipeline for you, asking for confirmation only when unsure.
+
+**Why this is hard (and worth speccing carefully):** there is no clean API that
+says "candidate X moved to stage Y." Signal lives in unstructured email from
+hundreds of different senders and ATS systems. The pipeline is therefore a
+classic **noisy-source → match → classify → confirm** problem:
+
+```
+Inbox (read-only)
+   │  incremental sync (Gmail historyId / Graph delta)
+   ▼
+1. INGEST    pull new messages since sync_cursor; store metadata + snippet
+   ▼
+2. MATCH     link message → application
+                • company domain == application's company domain
+                • thread_id continues an application's known thread
+                • known ATS sender patterns (greenhouse.io, lever.co, ashbyhq.com,
+                  myworkday.com, …)
+                • LLM tie-break when ambiguous (multiple open apps at one company)
+   ▼
+3. CLASSIFY  LLM maps the email → a status classification + confidence
+                (acknowledged / assessment / phone_screen / technical / onsite /
+                 offer / rejected / other) — prompt-versioned like every LLM call
+   ▼
+4. GATE      high confidence + monotonic transition → apply automatically
+             low confidence OR backwards/ambiguous → 'proposed' status_event,
+             surfaced for one-tap confirm/dismiss
+   ▼
+5. UPDATE    write status_event; on apply, update applications.status; stream via SSE
+```
+
+**Connection & sync.**
+- **OAuth, read-only.** Gmail `gmail.readonly`; Microsoft Graph `Mail.Read`. We
+  never request send/modify scopes. The consent screen states exactly this.
+- **Incremental, not full-scan.** First connect backfills only since the user's
+  earliest `submitted_at`. Thereafter we sync deltas via Gmail `historyId` /
+  Graph `deltaLink` stored in `email_accounts.sync_cursor`.
+- **Push where available, poll as fallback.** Gmail `users.watch` → Pub/Sub and
+  Graph subscriptions give near-real-time nudges; a periodic `arq` job (e.g. every
+  15 min) is the reliable fallback and also renews `watch_expires_at`.
+- **Scoped to job hunting.** We only persist messages that *match* an application.
+  Everything else is looked at transiently in memory and dropped — we are not
+  indexing the user's mailbox.
+
+**Matching strategy (cheap → expensive):** deterministic first (domain, thread,
+known ATS senders) resolves the large majority for free; the LLM is only invoked
+to disambiguate (e.g. two open applications at the same parent company) — the same
+two-stage cost discipline as the Matcher (§4.3).
+
+**Classification output:**
+```python
+class EmailStatusInference(BaseModel):
+    classification: Literal[
+        "acknowledged", "assessment", "phone_screen", "technical",
+        "onsite", "offer", "rejected", "ghosted_followup", "other"
+    ]
+    confidence: float                 # 0..1
+    suggested_status: str             # maps to applications.status
+    evidence: str                     # one quoted line that justifies it (for the UI)
+    requires_human: bool              # true for offer/rejected → always confirm
+```
+
+**Confidence gate (mirrors the Apply Engine's posture):**
+- **Auto-apply the transition** when confidence ≥ threshold *and* it moves the
+  application forward monotonically (e.g. `submitted → phone_screen`).
+- **Propose, don't apply** when confidence is low, the transition is backwards/
+  skips stages, or the classification is high-stakes. `offer` and `rejected`
+  **always** require a one-tap confirm — we never silently mark someone rejected.
+- Every transition is reversible: a `status_event` is an auditable record, and the
+  user can dismiss/undo. We never lose the email trail.
+
+**Hard rules (privacy & safety — enforced, not advisory):**
+- **Read-only scopes only.** No send, no delete, no modify — ever.
+- **OAuth tokens encrypted at rest** (`email_accounts.oauth_token_enc`); never
+  logged, never returned by any API. Disconnect deletes the token immediately.
+- **Minimal retention.** Persist matched-message metadata + a short snippet for
+  the audit trail; do not persist full bodies of unmatched mail.
+- **User owns the loop.** One-click disconnect; per-account pause; a clear
+  "what we can see" disclosure. This is the operator's own inbox, single-user.
+
+**Workers:** runs on the existing `arq`/Redis queue. Each classification is a
+normal `LLMClient` call (prompt-versioned, logged to `llm_calls`, eval-able) — so
+status inference gets the same observability and regression testing as the rest of
+the system, and can be tuned with its own eval suite (`status_classification_v1`).
+
 ---
 
 ## 5. API Surface
@@ -508,11 +810,42 @@ GET    /api/match?job_id=...
 POST   /api/generate                       Generate resume + cover letter
        body: {job_id, style_config}
        returns: {resume_artifact_id, cover_letter_artifact_id}
+GET    /api/artifacts                      List generated documents (+ scores, filterable by job/kind)
 GET    /api/artifacts/{id}                 Download artifact
+GET    /api/artifacts/{id}/scores          Per-criteria scores + delta vs baseline
+POST   /api/artifacts/baseline             Upload baseline résumé (scored, used as the "before")
 
 POST   /api/applications                   Create application entry
 PATCH  /api/applications/{id}              Update status
 GET    /api/applications                   Pipeline view
+
+# Auto-apply
+POST   /api/apply/queue                     Add jobs to the apply queue
+       body: {job_ids: [...]} or {filter: {min_fit, sources, ...}}
+GET    /api/apply/queue                     The review queue (grouped by state)
+POST   /api/apply/{application_id}/fill      Run field-mapping agent (returns field_map + confidence)
+POST   /api/apply/{application_id}/submit    Approve & submit a reviewed application
+POST   /api/apply/batch-approve              Approve all high-confidence in queue
+POST   /api/apply/{application_id}/skip      Remove from queue
+GET    /api/autopilot                        Get autopilot config
+PUT    /api/autopilot                        Update autopilot config (per-source toggles, thresholds)
+
+# Profile + answer bank (fuel for the field-mapping agent)
+GET    /api/profile/fields                   List profile fields
+PUT    /api/profile/fields/{key}             Upsert a profile field (work auth, notice, salary)
+GET    /api/answers                          List answer-bank entries
+POST   /api/answers/{id}/approve             Approve a drafted answer for reuse
+PUT    /api/answers/{id}                      Edit an answer
+
+# Email status sync (v2)
+GET    /api/email/accounts                   List connected inboxes (no tokens)
+POST   /api/email/connect                    Begin OAuth (returns provider consent URL)
+GET    /api/email/callback                   OAuth redirect → store encrypted token
+DELETE /api/email/accounts/{id}              Disconnect + delete token immediately
+POST   /api/email/{id}/sync                  Trigger an incremental sync now
+GET    /api/status-events?state=proposed     Pending status transitions awaiting confirm
+POST   /api/status-events/{id}/confirm       Apply a proposed transition
+POST   /api/status-events/{id}/dismiss       Reject a proposed transition
 
 POST   /api/eval/run                       Trigger eval suite
 GET    /api/eval/runs/{id}
@@ -524,23 +857,36 @@ Long-running operations stream progress:
 - `/api/scrape` — streams per-source progress
 - `/api/generate` — streams generation tokens for UX
 - `/api/eval/run` — streams per-case results
+- `/api/apply/queue` — streams live state changes (queued → auto-filling → submitted / needs_review / blocked) so the Apply Queue updates in real time
+- `/api/status-events/stream` *(v2)* — streams new email-derived status events so the Applications board moves cards and raises confirm prompts live
 
 ---
 
 ## 6. Frontend
 
+> **Design-first.** The UI is specified before the backend because the frontend
+> encapsulates what the user does. Design direction and clickable mockups live in
+> [`docs/design/DIRECTION.md`](../design/DIRECTION.md) and
+> [`docs/design/mockups/`](../design/mockups/) (static HTML + Tailwind, ported
+> ~1:1 into Next.js). Direction in one line: *mission control for a job hunt* —
+> dense, calm, scannable, with color reserved for one calibrated signal scale
+> (match / confidence / groundedness: rose → amber → emerald).
+
 ### 6.1 Pages
 
-| Route | Purpose |
-|---|---|
-| `/` | Dashboard — pipeline overview, recent jobs |
-| `/experience` | Manage experience corpus |
-| `/jobs` | Browse + search scraped jobs |
-| `/jobs/[id]` | Job detail: extracted info, match score, gaps, generate button |
-| `/applications` | Kanban-style pipeline |
-| `/admin/prompts` | View prompt versions, diff between versions |
-| `/admin/calls` | LLM call inspector |
-| `/admin/evals` | Eval suite runs and trends |
+| Route | Purpose | Mockup |
+|---|---|---|
+| `/` | Dashboard — pipeline + apply-queue health at a glance | `dashboard.html` |
+| `/jobs` | Browse + search matched jobs (sorted by fit) | `jobs.html` |
+| `/jobs/[id]` | Job detail: extraction, match, gaps, grounded generation | `job-detail.html` |
+| `/apply` | **Apply Queue ★** — the auto-apply review surface; field-map cards, bulk approve, autopilot banner | `apply-queue.html` |
+| `/applications` | Kanban-style post-submission pipeline; *(v2)* cards auto-advance from email, with a "confirm status" affordance on proposed transitions | `applications.html` |
+| `/documents` | Generated résumés & cover letters, per-criteria scores, before/after vs uploaded baseline | `documents.html` |
+| `/experience` | Manage experience corpus | `experience.html` |
+| `/settings` | Sources + Autopilot toggles, Answer Bank, Profile fields; *(v2)* connect/disconnect inbox for status sync, with a "what we can see" read-only disclosure | `settings.html` |
+| `/admin/prompts` | View prompt versions, diff between versions | `admin-prompts.html` |
+| `/admin/calls` | LLM call inspector | `admin-calls.html` |
+| `/admin/evals` | Eval suite runs and trends | `admin-evals.html` |
 
 ### 6.2 Key UX Flows
 
@@ -549,11 +895,35 @@ Long-running operations stream progress:
 2. User triggers initial scrape with a natural language query.
 3. User sees ranked job list with match scores.
 
-**Flow 2 — Apply to a job:**
-1. User clicks a job → sees extracted info, match score, gaps.
-2. User clicks "Generate" → resume + cover letter stream in.
-3. User reviews, edits inline, exports PDF.
-4. User clicks "Mark as Submitted" → application tracked.
+**Flow 2 — Mass auto-apply (the core flow):**
+1. User selects matched jobs (or "add top N by fit") → jobs enter the apply queue.
+2. Apply Engine works each in the background: generates the tailored artifacts,
+   field-maps the form, and either **auto-submits** (safe + high-confidence) or
+   **queues for review**.
+3. User opens the **Apply Queue** — *one* surface for every job board. The safe
+   majority is already submitted; the rest appear as uniform field-map cards.
+4. User skims the queue: confirms amber fields (unknown screening Qs, pinned
+   work-authorization), then **bulk-approves high-confidence** or approves/edits
+   per card. Blocked (CAPTCHA) items are flagged for manual handling.
+5. Hundreds of applications cleared in minutes — the user never visited a single
+   job board's UI.
+
+**Flow 2b — Single deliberate apply:**
+1. User opens a job → sees extraction, match, gaps, grounded resume preview.
+2. Clicks "Add to apply queue" → handled by Flow 2, or edits/exports the PDF
+   manually first.
+
+**Flow 4 — Email status sync *(v2)*:**
+1. In Settings, user connects their inbox via OAuth (read-only) and sees exactly
+   what JobCraft can access.
+2. A recruiter replies to a submitted application. The next sync ingests it,
+   matches it to the application (domain/thread/ATS sender), and the classifier
+   infers the new stage.
+3. High-confidence forward moves apply automatically — the card slides to the next
+   column on the Applications board in real time (SSE).
+4. Low-confidence or high-stakes transitions (offer/rejected) surface as a
+   "confirm status" prompt on the card with the quoted evidence line; one tap
+   applies or dismisses.
 
 **Flow 3 — Iterate prompts:**
 1. Developer edits a prompt template → registers as new `prompt_version`.
@@ -570,6 +940,10 @@ Long-running operations stream progress:
 | Backend language | Python 3.12 | Best LLM ecosystem; async via `asyncio` |
 | Web framework | FastAPI | Async, Pydantic-native, OpenAPI for free |
 | Frontend | Next.js 15 + React 19 + Tailwind | Mainstream; user already knows this |
+| UI components | **shadcn/ui** (Radix primitives + Tailwind) | Copy-paste components that live *in our repo*, so the design tokens in `theme.js` / `components.css` stay the source of truth. We adopt the hard, accessibility-sensitive primitives (`Dialog`, `Select`, `DropdownMenu`, `Tabs`, `Tooltip`, `Checkbox`, `Toast`, `Table` headless bits) and keep our bespoke visual classes (`.chip`, `.badge`, `.skill-tag`, `.kanban-card`) layered on top. No heavy theme runtime to fight. |
+| Icons | `lucide-react` | Ships with shadcn/ui; matches the stroke icons already used in the mockups |
+| Email sync *(v2)* | Gmail API + Microsoft Graph; `google-api-python-client`, `msal` | Read-only inbox access for status tracking (§4.9) |
+| Secret storage | OAuth tokens encrypted at rest (`cryptography` Fernet) or platform secret manager | Email refresh tokens are secrets — never plaintext |
 | Database | Postgres 16 | Reliable, JSONB for flexibility |
 | Vector store | Qdrant | Local-first, open source, easy Docker deploy |
 | LLM SDKs | `anthropic`, `openai` | Official SDKs |
@@ -627,13 +1001,82 @@ The spec is large. Implementation will be phased so each phase is independently 
 - Initial eval suites: `resume_quality_v1`, `extraction_accuracy_v1`, `match_consistency_v1`
 - **Demo:** Run eval suite, see per-prompt-version score history.
 
-### Phase 6 — Application pipeline + polish (2 days)
-- Applications table + Kanban UI
+### Phase 6 — Apply Engine (4 days)
+- `profile_fields` + `answer_bank` tables; answer-bank embedding + similarity reuse
+- `ApplyStrategy` adapters: LinkedIn Easy Apply, Greenhouse/Lever/Ashby form, MyCareersFuture, generic-form
+- LLM field-mapping agent + per-field confidence
+- Confidence gate + `AutopilotConfig`; `arq` apply workers with per-source rate limits
+- Apply Queue UI (field-map review cards, bulk approve, autopilot banner) — port from `apply-queue.html`
+- Hard safety rules: pinned knockout fields, no CAPTCHA solving, approved-answers-only
+- **Demo:** Queue 50 SG jobs; watch the safe majority auto-submit and clear the rest from one review queue.
+
+### Phase 7 — Pipeline + polish (2 days)
+- Applications Kanban (post-submission stages)
 - Admin/observability pages
 - Cost dashboard
 - README + architecture doc
 
-**Total estimated effort:** ~14 working days with aggressive AI assistance. With a 2-3 week focused sprint as you described, this fits.
+### Phase 8 — Email status sync (3 days, v2)
+- `email_accounts`, `email_messages`, `status_events` tables; token encryption
+- Gmail + Outlook OAuth (read-only) connect/disconnect flow
+- Incremental sync worker (`historyId` / Graph delta) + watch/poll fallback on `arq`
+- Matcher (domain / thread / ATS-sender / LLM tie-break) → classifier (`LLMClient`, prompt-versioned)
+- Confidence gate → auto-apply vs proposed `status_event`; SSE to the board
+- `status_classification_v1` eval suite; Settings connect UI + board confirm affordance
+- **Demo:** Connect inbox; a rejection email auto-moves a card after one-tap confirm.
+
+**Total estimated effort:** ~21 working days with aggressive AI assistance. The
+Apply Engine (browser automation + anti-bot) and Email Sync (OAuth + noisy
+classification) are the riskiest phases and are deliberately sequenced last, after
+the grounded-generation core is proven.
+
+> **Phase 0 note:** scaffold the frontend by porting the static mockups in
+> `docs/design/mockups/` into Next.js components, preserving the shared design
+> tokens (`theme.js` → Tailwind config, `components.css` → `globals.css`). Pull in
+> shadcn/ui primitives (`Dialog`, `Select`, `DropdownMenu`, `Tabs`, `Tooltip`,
+> `Checkbox`, `Toast`) at this point and wire them to the existing token classes.
+
+### 8.1 Task decomposition for model delegation
+
+The phases above are sized for **Opus-as-orchestrator, Sonnet-as-implementer**.
+The orchestrator owns architecture, interfaces, and review; bite-size tasks are
+delegated to cheaper models. A task is delegation-ready when it is:
+
+1. **Single-file or single-module** in scope, with the file path named.
+2. **Interface-first** — the typed signature (Pydantic model / Protocol / API
+   shape) is given by the orchestrator; the implementer fills the body only.
+3. **Independently testable** — ships with the test command that proves it (TDD:
+   the failing test is written or specified first).
+4. **Context-bounded** — the implementer needs only the named interface + one
+   pattern file to mirror, never the whole repo.
+
+**Per-task hand-off template** (what the orchestrator passes to Sonnet):
+```
+TASK: <verb + single outcome, e.g. "Implement the Greenhouse JobSource adapter">
+FILE: backend/scrapers/greenhouse.py
+INTERFACE: implements JobSource (see §4.1) — list_jobs / fetch_job
+MIRROR: backend/scrapers/lever.py  (same shape, already merged)
+CONSTRAINTS: async httpx; respect rate limit; no new deps
+DONE WHEN: `pytest tests/scrapers/test_greenhouse.py` green; ≥80% coverage
+```
+
+**Worked split — Phase 6 (Apply Engine) → delegatable tasks:**
+
+| # | Task (→ Sonnet) | File | Done when |
+|---|---|---|---|
+| 6.1 | `profile_fields` + `answer_bank` tables + Alembic migration | `backend/db/migrations/` | migration applies; round-trip test green |
+| 6.2 | Answer-bank embedding + similarity retrieval | `backend/apply/answer_bank.py` | top-k retrieval test green |
+| 6.3 | `ApplyStrategy` Protocol + base form renderer | `backend/apply/base.py` | type-checks; mock form test |
+| 6.4 | Greenhouse/Lever/Ashby form adapter | `backend/apply/ats_form.py` | fills fixture form; test green |
+| 6.5 | MyCareersFuture adapter | `backend/apply/mycareersfuture.py` | fills fixture form; test green |
+| 6.6 | LLM field-mapping agent + per-field confidence | `backend/apply/field_map.py` | maps fixture → field_map; eval case |
+| 6.7 | Confidence gate + `AutopilotConfig` | `backend/apply/gate.py` | unit tests for each branch |
+| 6.8 | `arq` apply worker + rate limits + `application_attempts` write | `backend/apply/worker.py` | integration test on mock strategy |
+| 6.9 | Apply Queue UI port from `apply-queue.html` | `frontend/app/apply/` | renders; matches mockup |
+
+Tasks 6.3–6.7 are pure logic (ideal for Sonnet); the orchestrator (Opus) owns the
+interface contracts in 6.3, the safety-rule review, and integration in 6.8. The
+same split applies to every phase — the worked example is the pattern to follow.
 
 ---
 
@@ -644,22 +1087,41 @@ The spec is large. Implementation will be phased so each phase is independently 
 | Scraping breaks when sites change | Multi-source design; each source independent; fallback to manual JD paste |
 | LLM costs spiral | All calls logged with cost; daily budget alarm; cheap models (Haiku) for prefiltering |
 | Resume generation hallucinates | Strict groundedness check; LLM-as-judge gate; UI flags ungrounded claims |
-| Job sites detect/block scrapers | Respect rate limits + robots.txt; rotate user agents; defer LinkedIn to v2 |
-| Spec is too large to finish in one sprint | Phased plan — each phase is independently useful |
+| Job sites detect/block scrapers | Tier-1 sources are official APIs (no scraping). LinkedIn/Glints are best-effort Tier-2 — low rate, expected to break, never a dependency. |
+| **LinkedIn ToS / account restriction** | Scraping & automated apply violate LinkedIn ToS. Use a *dedicated disposable* session, low rate, daily cap. Architect for it to be banned/rotated; never block core flows on it. Personal single-user tool using the operator's own account. |
+| **Auto-apply gets the account banned** | Per-source rate limits + `daily_cap`; pace submissions over time; prefer official ATS forms over scraped flows. |
+| **CAPTCHA / bot-detection walls** | Hard stop — no solving services, no evasion. Blocked applications route to manual. |
+| **Wrong answer to a knockout question** | Knockout fields (work auth, visa, eligibility, YOE) come only from the user's true `profile_fields`; never auto-guessed. Missing → queued, not invented. |
+| **Mass applying lowers quality / annoys recruiters** | Every application is still tailored + grounded; a `min_fit` floor prevents applying to poor matches; volume comes from automation, not lowered standards. |
+| **Email sync misclassifies a status** (e.g. marks active app rejected) | Forward-only auto-apply; offer/rejected always require one-tap confirm; every transition is a reversible `status_event` with the quoted evidence line; `status_classification_v1` eval guards regressions |
+| **Email matched to wrong application** (same company, multiple roles) | Deterministic match first (thread/domain/ATS sender); LLM tie-break only on ambiguity; unmatched mail is dropped, not force-linked |
+| **Inbox privacy / token leak** | Read-only OAuth scopes only; tokens encrypted at rest, never logged or returned; minimal retention (matched metadata + snippet); one-click disconnect deletes the token |
+| **Gmail/Graph push subscription expiry** | `watch_expires_at` tracked and renewed by the sync worker; periodic poll is the always-on fallback so nothing is missed if push lapses |
+| Spec is too large to finish in one sprint | Phased plan — each phase is independently useful; tasks decomposed for Sonnet delegation (§8.1) |
 | Interview-related risk: "did AI write all this?" | The eval suite + observability + prompt versioning are deeply your engineering work and impossible to fake credibly. Lean on those in interviews. |
 
 ---
 
 ## 10. Out of Scope (v1)
 
-- Auto-submission of applications
+**Now in scope** (promoted from the original out-of-scope list): auto-submission of
+applications (§4.8), LinkedIn scraping (§4.1, best-effort Tier 2), and the
+Singapore-focused multi-source scraper.
+
+Still out of scope:
+
 - Browser extension integrations
-- Multi-user accounts with auth (single-user MVP)
-- Mobile UI
-- LinkedIn scraping (deferred)
+- Multi-user / multi-tenant accounts with auth (single-user, personal-use MVP)
+- Applying on behalf of third parties (JobCraft applies only as its own operator)
+- CAPTCHA-solving services or bot-detection evasion (deliberately excluded — see §9)
+- Mobile UI (read-only triage only)
 - Fine-tuning custom models
 - Multi-language resumes
 - Job recommendation based on past application outcomes (great v2 feature)
+
+> **Moved into scope as v2 (Phase 8):** automatic application-status tracking from
+> the user's email (§4.9). It is sequenced after the v1 core but fully specified
+> here so the data model and Applications board are built v2-ready from day one.
 
 ---
 
@@ -672,7 +1134,9 @@ The spec is large. Implementation will be phased so each phase is independently 
 | **LLM-as-judge** | Match scoring; groundedness check; eval rubrics |
 | **Evals & regression testing** | Entire `eval/` subsystem |
 | **Prompt engineering & versioning** | `prompt_versions` table; admin diff view |
-| **Tool use / agentic workflows** | Scrape → extract → match → generate chain |
+| **Tool use / agentic workflows** | Scrape → extract → match → generate → **auto-apply** chain |
+| **Agentic browser automation** | Apply Engine: LLM field-mapping agent fills real forms with a confidence gate and hard safety rules |
+| **Noisy-source classification + OAuth integration** | Email Status Tracker (v2): match recruiter mail → application, LLM-classify → pipeline stage, confidence-gated with human confirm |
 | **Observability for AI systems** | `llm_calls` table; admin dashboard |
 | **Cost/quality tradeoffs** | Two-stage matcher; per-call cost tracking |
 | **Production engineering** | Async, typed APIs, migrations, eval CI |

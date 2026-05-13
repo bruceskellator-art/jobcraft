@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JobCraft · Apply Queue</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/theme.js"></script>
+  <link rel="stylesheet" href="assets/components.css" />
+</head>
+<body data-page="apply-queue" class="bg-zinc-50 text-zinc-900 font-sans">
+<div class="flex min-h-screen">
+  <aside id="sidebar" class="w-60 bg-white border-r border-zinc-200 fixed inset-y-0"></aside>
+  <main class="flex-1 ml-60">
+
+    <header class="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <div>
+        <h1 class="text-sm font-semibold">Apply Queue</h1>
+        <p class="text-xs text-zinc-400">One queue for every job board — review here, never click through theirs</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-ghost">Skip all low-fit</button>
+        <button class="btn btn-primary">Approve all high-confidence · 7</button>
+      </div>
+    </header>
+
+    <!-- Autopilot banner -->
+    <div class="px-6 py-2.5 border-b flex items-center gap-2 text-xs" style="background:#ecfdf5;border-color:#a7f3d0">
+      <svg class="w-3.5 h-3.5 flex-none" style="color:#059669" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      <span class="font-semibold" style="color:#065f46">Autopilot: selective</span>
+      <span style="color:#047857">— auto-submitting MCF + Greenhouse above 0.75 confidence. Everything else waits for you below.</span>
+    </div>
+
+    <div class="p-6 grid grid-cols-5 gap-6">
+
+      <!-- ── Queue list ── -->
+      <section class="col-span-3 bg-white border border-zinc-200 rounded-xl overflow-hidden">
+        <div class="px-4 py-2.5 border-b border-zinc-100 bg-zinc-50/60 flex items-center">
+          <input type="checkbox" class="mr-3 accent-indigo-600" />
+          <span class="text-xs font-semibold text-zinc-500 flex-1">Role / Company</span>
+          <span class="text-xs font-medium text-zinc-400 w-14 text-center">Fit</span>
+          <span class="text-xs font-medium text-zinc-400 w-14 text-center">Conf.</span>
+          <span class="text-xs font-medium text-zinc-400 w-28">State</span>
+        </div>
+
+        <!-- Row 1 — GovTech, selected/active -->
+        <div class="flex items-center gap-3 px-4 py-3 data-row border-l-2" style="background:#fafaf9;border-left-color:#4f46e5">
+          <input type="checkbox" checked class="flex-none accent-indigo-600" />
+          <div class="logo-avatar flex-none" style="background:#e0e7ff;color:#4338ca">GT</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-zinc-900">AI Engineer (LLM Platform)</div>
+            <div class="flex items-center gap-1.5 mt-1">
+              <span class="text-xs text-zinc-400">GovTech</span>
+              <span class="source-pill">MCF</span>
+              <span class="skill-tag skill-ml">Python</span>
+              <span class="skill-tag skill-ml">RAG</span>
+            </div>
+          </div>
+          <span class="chip chip-mid w-14 justify-center flex-none">0.64</span>
+          <span class="chip chip-mid w-14 justify-center flex-none">0.62</span>
+          <span class="badge badge-review w-28 flex-none"><span class="dot bg-amber-500"></span>Needs review</span>
+        </div>
+
+        <!-- Row 2 — Stripe, auto-submitted -->
+        <div class="flex items-center gap-3 px-4 py-3 data-row border-b border-zinc-50">
+          <input type="checkbox" class="flex-none accent-indigo-600" />
+          <div class="logo-avatar flex-none" style="background:#ede9fe;color:#5b21b6">ST</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-800">Forward Deployed Engineer</div>
+            <div class="flex items-center gap-1.5 mt-1">
+              <span class="text-xs text-zinc-400">Stripe</span>
+              <span class="source-pill">GH</span>
+              <span class="skill-tag skill-be">Python</span>
+              <span class="skill-tag skill-fe">React</span>
+            </div>
+          </div>
+          <span class="chip chip-high w-14 justify-center flex-none">0.89</span>
+          <span class="chip chip-high w-14 justify-center flex-none">0.91</span>
+          <span class="badge badge-submitted w-28 flex-none"><span class="dot bg-emerald-500"></span>Auto-submitted</span>
+        </div>
+
+        <!-- Row 3 — ByteDance, auto-filling -->
+        <div class="flex items-center gap-3 px-4 py-3 data-row border-b border-zinc-50">
+          <input type="checkbox" class="flex-none accent-indigo-600" />
+          <div class="logo-avatar flex-none" style="background:#fce7f3;color:#be185d">BD</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-800">AI Solutions Engineer</div>
+            <div class="flex items-center gap-1.5 mt-1">
+              <span class="text-xs text-zinc-400">ByteDance</span>
+              <span class="source-pill">LI</span>
+              <span class="skill-tag skill-ml">LLMs</span>
+              <span class="skill-tag skill-ml">PyTorch</span>
+            </div>
+          </div>
+          <span class="chip chip-high w-14 justify-center flex-none">0.81</span>
+          <span class="chip chip-high w-14 justify-center flex-none">0.84</span>
+          <span class="badge badge-filling w-28 flex-none"><span class="dot bg-blue-500"></span>Auto-filling</span>
+        </div>
+
+        <!-- Row 4 — Shopee, blocked -->
+        <div class="flex items-center gap-3 px-4 py-3 data-row opacity-60 border-b border-zinc-50">
+          <input type="checkbox" class="flex-none accent-indigo-600" />
+          <div class="logo-avatar flex-none" style="background:#ffedd5;color:#c2410c">SH</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-700">Senior Backend Engineer</div>
+            <div class="flex items-center gap-1.5 mt-1">
+              <span class="text-xs text-zinc-400">Shopee</span>
+              <span class="source-pill">Workday</span>
+              <span class="skill-tag skill-be">Go</span>
+              <span class="skill-tag skill-infra">Redis</span>
+            </div>
+          </div>
+          <span class="chip chip-low w-14 justify-center flex-none">0.37</span>
+          <span class="chip chip-low w-14 justify-center flex-none">0.20</span>
+          <span class="badge badge-blocked w-28 flex-none"><span class="dot bg-rose-500"></span>Blocked · CAPTCHA</span>
+        </div>
+
+        <!-- Row 5 — Grab, queued -->
+        <div class="flex items-center gap-3 px-4 py-3 data-row">
+          <input type="checkbox" class="flex-none accent-indigo-600" />
+          <div class="logo-avatar flex-none" style="background:#d1fae5;color:#065f46">GR</div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-zinc-800">ML Engineer</div>
+            <div class="flex items-center gap-1.5 mt-1">
+              <span class="text-xs text-zinc-400">Grab</span>
+              <span class="source-pill">GH</span>
+              <span class="skill-tag skill-ml">PyTorch</span>
+              <span class="skill-tag skill-infra">Spark</span>
+            </div>
+          </div>
+          <span class="chip chip-mid w-14 justify-center flex-none">0.58</span>
+          <span class="chip chip-mid w-14 justify-center flex-none">0.55</span>
+          <span class="badge badge-queued w-28 flex-none"><span class="dot bg-zinc-400"></span>Queued</span>
+        </div>
+
+      </section>
+
+      <!-- ── Field-map review card ── -->
+      <section class="col-span-2 bg-white border border-zinc-200 rounded-xl self-start">
+
+        <!-- Card header with company logo -->
+        <div class="px-4 py-3 border-b border-zinc-200">
+          <div class="flex items-center gap-3">
+            <div class="logo-avatar" style="background:#e0e7ff;color:#4338ca;width:2.5rem;height:2.5rem;border-radius:0.625rem;font-size:0.7rem">GT</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-zinc-900">GovTech</span>
+                <span class="source-pill">MCF</span>
+              </div>
+              <div class="text-xs text-zinc-500 mt-0.5">AI Engineer (LLM Platform)</div>
+            </div>
+            <span class="chip chip-mid flex-none">0.62</span>
+          </div>
+          <div class="flex flex-wrap gap-1 mt-2.5">
+            <span class="skill-tag skill-ml">Python</span>
+            <span class="skill-tag skill-be">FastAPI</span>
+            <span class="skill-tag skill-ml">RAG</span>
+            <span class="skill-tag skill-infra">PostgreSQL</span>
+          </div>
+        </div>
+
+        <div class="p-4 space-y-3 text-sm">
+          <p class="text-xs text-zinc-400">What we'll submit — confirm the amber fields</p>
+
+          <div class="flex items-start justify-between gap-3">
+            <span class="text-zinc-500 w-32 flex-none text-xs">Full name</span>
+            <span class="flex-1 text-zinc-800 text-sm">Bruce Ong</span>
+            <span class="chip chip-high flex-none">1.00</span>
+          </div>
+          <div class="flex items-start justify-between gap-3">
+            <span class="text-zinc-500 w-32 flex-none text-xs">Email</span>
+            <span class="flex-1 text-zinc-800 text-sm">bruce@example.com</span>
+            <span class="chip chip-high flex-none">1.00</span>
+          </div>
+
+          <!-- Knockout — pinned, never auto-filled -->
+          <div class="flex items-start gap-3 -mx-2 px-2 py-2.5 rounded-lg border" style="background:#fffbeb;border-color:#fde68a">
+            <span class="text-xs font-semibold mt-1 w-32 flex-none" style="color:#92400e">Work auth ⚲</span>
+            <div class="flex-1">
+              <select class="border rounded px-2 py-1 text-sm w-full" style="border-color:#fcd34d;background:#fff">
+                <option>Singapore Citizen / PR</option>
+                <option>Need Employment Pass</option>
+              </select>
+              <p class="text-xs mt-1" style="color:#b45309">Knockout — pinned, never auto-guessed</p>
+            </div>
+          </div>
+
+          <!-- Amber screening Q -->
+          <div class="flex items-start gap-3 -mx-2 px-2 py-2.5 rounded-lg" style="background:#fafaf9">
+            <span class="text-zinc-500 text-xs mt-1 w-32 flex-none">"Why GovTech?"</span>
+            <div class="flex-1">
+              <textarea rows="3" class="border border-zinc-200 rounded px-2 py-1 text-sm w-full text-zinc-700 resize-none">Drawn to GovTech's mandate to build citizen-facing platforms at national scale; my B2C work at Traveloka maps directly to high-traffic public services.</textarea>
+              <p class="text-xs mt-1" style="color:#b45309">Drafted from cover letter — edit or approve</p>
+            </div>
+          </div>
+
+          <div class="flex items-start justify-between gap-3">
+            <span class="text-zinc-500 w-32 flex-none text-xs">Notice period</span>
+            <span class="flex-1 text-zinc-800 text-sm">1 month</span>
+            <span class="chip chip-high flex-none">0.95</span>
+          </div>
+          <div class="flex items-start justify-between gap-3">
+            <span class="text-zinc-500 w-32 flex-none text-xs">Resume</span>
+            <span class="flex-1 text-zinc-800 text-sm truncate">resume-govtech-ai.pdf</span>
+            <span class="chip chip-high flex-none">1.00</span>
+          </div>
+        </div>
+
+        <div class="px-4 py-3 border-t border-zinc-200 flex gap-2">
+          <button class="btn btn-ghost text-xs">Skip</button>
+          <button class="btn btn-ghost flex-1 text-xs">Save edits</button>
+          <button class="btn btn-primary flex-1 text-xs">Approve &amp; submit</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+<script src="assets/layout.js"></script>
+</body>
+</html>
