@@ -1,0 +1,47 @@
+# JobCraft — local development services
+# Usage: docker compose up -d
+# No obsolete 'version:' key — uses the modern Compose spec.
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: jobcraft
+      POSTGRES_PASSWORD: jobcraft
+      POSTGRES_DB: jobcraft
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jobcraft -d jobcraft"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"   # HTTP / REST API
+      - "6334:6334"   # gRPC API
+    volumes:
+      - qdrantdata:/qdrant/storage
+    restart: unless-stopped
+
+  # redis:
+  #   image: redis:7
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redisdata:/data
+  #   restart: unless-stopped
+  #
+  # Uncomment in Phase 6 when arq workers are introduced.
+  # JOBCRAFT_REDIS_URL=redis://localhost:6379
+
+volumes:
+  pgdata:
+  qdrantdata:
+  # redisdata:
