@@ -16,6 +16,9 @@ dependencies = [
     "asyncpg",
     "alembic",
     "greenlet",
+    "anthropic",
+    "openai",
+    "jinja2",
 ]
 
 [project.optional-dependencies]
