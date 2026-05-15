@@ -12,6 +12,10 @@ dependencies = [
     "uvicorn[standard]",
     "pydantic-settings",
     "pydantic>=2",
+    "sqlalchemy>=2.0",
+    "asyncpg",
+    "alembic",
+    "greenlet",
 ]
 
 [project.optional-dependencies]
@@ -21,6 +25,7 @@ dev = [
     "httpx",
     "ruff",
     "mypy",
+    "aiosqlite",
 ]
 
 [tool.setuptools.packages.find]
