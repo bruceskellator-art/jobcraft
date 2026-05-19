@@ -31,8 +31,9 @@ class ExperienceItem(Base):
     start_date: Mapped[sa.Date | None] = mapped_column(sa.Date, nullable=True)
     end_date: Mapped[sa.Date | None] = mapped_column(sa.Date, nullable=True)
     content: Mapped[str] = mapped_column(sa.Text, nullable=False)
-    tags: Mapped[list | None] = mapped_column(
+    tags: Mapped[list[str]] = mapped_column(
         ARRAY(sa.Text()).with_variant(sa.JSON(), "sqlite"),
+        default=list,
         server_default="{}",
     )
     metadata_: Mapped[dict | None] = mapped_column(

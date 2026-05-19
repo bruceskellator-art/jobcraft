@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_session
 from app.db.models.user import User
+from app.llm.adapters.anthropic import AnthropicAdapter
+from app.llm.client import LLMClient
 
 # Phase-1 stand-in for real authentication.
 # Returns (or creates) a single fixed developer user so that all routes
@@ -30,3 +32,15 @@ async def get_current_user(
         await session.flush()
         await session.refresh(user)
     return user
+
+
+def get_llm_client(
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> LLMClient:
+    """Build an LLMClient backed by AnthropicAdapter for production use.
+
+    In tests, override this dependency with a MockAdapter-backed LLMClient:
+
+        app.dependency_overrides[get_llm_client] = lambda: LLMClient(session, MockAdapter(...))
+    """
+    return LLMClient(session=session, adapter=AnthropicAdapter())

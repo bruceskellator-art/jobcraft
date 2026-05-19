@@ -19,6 +19,8 @@ dependencies = [
     "anthropic",
     "openai",
     "jinja2",
+    "pypdf>=4.0",
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
