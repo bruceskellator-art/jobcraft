@@ -45,5 +45,5 @@ class ExperienceItem(Base):
         sa.DateTime(timezone=True), server_default=sa.func.now()
     )
     updated_at: Mapped[sa.DateTime | None] = mapped_column(
-        sa.DateTime(timezone=True), server_default=sa.func.now()
+        sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()
     )

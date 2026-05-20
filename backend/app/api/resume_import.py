@@ -40,12 +40,24 @@ async def import_resume(
             detail=f"Only PDF uploads are accepted. Received content-type: '{content_type}'.",
         )
 
-    data = await file.read()
+    data = await file.read(_MAX_UPLOAD_BYTES + 1)
+
+    if len(data) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Empty file.",
+        )
 
     if len(data) > _MAX_UPLOAD_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File exceeds the 10 MB limit ({len(data)} bytes received).",
+            detail="File exceeds the 10 MB limit.",
+        )
+
+    if not data.startswith(b"%PDF-"):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="File is not a valid PDF.",
         )
 
     try:
@@ -62,6 +74,7 @@ async def import_resume(
         user_id=current_user.id,
         resume_text=resume_text,
     )
+    await session.commit()
 
     return ResumeImportResponse(
         created=[ExperienceItemRead.model_validate(item) for item in created_items],

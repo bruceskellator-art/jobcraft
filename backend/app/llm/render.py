@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from jinja2 import Environment, StrictUndefined  # noqa: I001
 
+# PROMPT-ONLY: autoescape intentionally disabled — do NOT reuse for HTML rendering.
 _ENV = Environment(undefined=StrictUndefined, autoescape=False)
 
 

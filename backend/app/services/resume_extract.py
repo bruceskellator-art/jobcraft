@@ -3,9 +3,10 @@ from __future__ import annotations
 import io
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.experience_item import ExperienceItem
@@ -49,7 +50,9 @@ Rules:
 - If a field is unknown, use null for dates or an empty string for text fields.
 
 Resume text:
+<resume>
 {{ resume_text }}
+</resume>
 """
 
 
@@ -65,8 +68,8 @@ def extract_text_from_pdf(data: bytes) -> str:
 
     try:
         reader = PdfReader(io.BytesIO(data))
-    except Exception as exc:
-        raise ValueError(f"Could not read PDF: {exc}") from exc
+    except Exception:
+        raise ValueError("Could not parse the uploaded file as a PDF.") from None
 
     pages_text = [page.extract_text() or "" for page in reader.pages]
     text = "\n".join(pages_text).strip()
@@ -102,8 +105,19 @@ async def ensure_extraction_prompt(session: AsyncSession) -> PromptVersion:
         is_active=True,
     )
     session.add(prompt)
-    await session.flush()
-    await session.refresh(prompt)
+    try:
+        await session.flush()
+        await session.refresh(prompt)
+    except IntegrityError:
+        await session.rollback()
+        # Another concurrent request already inserted the row; re-select it.
+        result = await session.execute(
+            select(PromptVersion).where(
+                PromptVersion.name == _PROMPT_NAME,
+                PromptVersion.is_active == True,  # noqa: E712
+            )
+        )
+        prompt = result.scalar_one()
     return prompt
 
 
@@ -113,8 +127,6 @@ def _parse_date(value: str | None) -> date | None:
         return None
     for fmt in ("%Y-%m-%d", "%Y-%m"):
         try:
-            from datetime import datetime
-
             return datetime.strptime(value, fmt).date()
         except ValueError:
             continue
@@ -172,5 +184,4 @@ async def import_resume_from_text(
         experience = await repo.create(user_id, create_schema)
         created.append(experience)
 
-    await session.commit()
     return created

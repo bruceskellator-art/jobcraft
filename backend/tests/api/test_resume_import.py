@@ -186,3 +186,31 @@ class TestImportResumeEndpoint:
 
         # Assert
         assert response.status_code == 422
+
+    async def test_empty_file_returns_422(self, client: AsyncClient) -> None:
+        # Arrange — zero-byte upload with PDF content-type
+
+        # Act
+        response = await client.post(
+            "/api/experience/import",
+            files={"file": ("empty.pdf", b"", "application/pdf")},
+        )
+
+        # Assert
+        assert response.status_code == 422
+        assert "Empty file" in response.json()["detail"]
+
+    async def test_non_pdf_bytes_with_pdf_content_type_returns_415(
+        self, client: AsyncClient
+    ) -> None:
+        # Arrange — bytes that lack the %PDF- magic header but claim to be PDF
+
+        # Act
+        response = await client.post(
+            "/api/experience/import",
+            files={"file": ("fake.pdf", b"This is not a real PDF", "application/pdf")},
+        )
+
+        # Assert
+        assert response.status_code == 415
+        assert "not a valid PDF" in response.json()["detail"]

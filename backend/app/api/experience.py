@@ -26,7 +26,6 @@ def _get_repo(session: AsyncSession = Depends(get_session)) -> ExperienceReposit
 async def list_experience_items(
     current_user: User = Depends(get_current_user),  # noqa: B008
     repo: ExperienceRepository = Depends(_get_repo),  # noqa: B008
-    session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> list[ExperienceItemRead]:
     """List all experience items for the current user."""
     items = await repo.list_by_user(current_user.id)

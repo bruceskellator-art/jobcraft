@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db.base import get_session
 from app.db.models.user import User
 from app.llm.adapters.anthropic import AnthropicAdapter
@@ -23,13 +24,18 @@ async def get_current_user(
     """Return the dev user, creating it on first call.
 
     Phase-1 auth stub — not suitable for production.
+    Raises HTTP 501 if called outside the development environment.
     """
+    if get_settings().environment != "development":
+        raise HTTPException(status_code=501, detail="Auth not configured")
+
     result = await session.execute(select(User).where(User.email == _DEV_EMAIL))
     user = result.scalar_one_or_none()
     if user is None:
         user = User(email=_DEV_EMAIL, name=_DEV_NAME)
         session.add(user)
         await session.flush()
+        await session.commit()
         await session.refresh(user)
     return user
 

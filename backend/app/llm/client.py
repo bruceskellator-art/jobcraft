@@ -23,6 +23,7 @@ T = TypeVar("T", bound=BaseModel)
 
 _DEFAULT_MAX_TOKENS = 1024
 _DEFAULT_SYSTEM: str | None = None
+_MAX_ALLOWED_TOKENS = 8192
 
 
 class LLMClient:
@@ -50,7 +51,10 @@ class LLMClient:
         rendered = render_template(pv.template, inputs)
 
         metadata = pv.metadata_ or {}
-        max_tokens: int = int(metadata.get("max_tokens", _DEFAULT_MAX_TOKENS))
+        max_tokens: int = min(
+            int(metadata.get("max_tokens", _DEFAULT_MAX_TOKENS)),
+            _MAX_ALLOWED_TOKENS,
+        )
         system: str | None = metadata.get("system", _DEFAULT_SYSTEM)
         force_json: bool = response_model is not None
 
@@ -94,7 +98,8 @@ class LLMClient:
         if parsed is not None:
             try:
                 parsed_dict = parsed.model_dump()
-            except Exception:
+            except Exception as exc:
+                logger.exception("Failed to serialize parsed response to dict: %s", exc)
                 parsed_dict = None
 
         call = LlmCall(
