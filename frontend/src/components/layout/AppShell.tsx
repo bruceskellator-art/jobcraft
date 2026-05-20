@@ -1,14 +1,46 @@
+'use client'
+
+import { usePathname } from 'next/navigation'
 import { Sidebar } from './Sidebar'
+
+type NavPage =
+  | 'dashboard'
+  | 'jobs'
+  | 'apply-queue'
+  | 'applications'
+  | 'documents'
+  | 'experience'
+  | 'settings'
+  | 'admin-calls'
+  | 'admin-evals'
+  | 'admin-prompts'
+
+function getActivePage(pathname: string): NavPage {
+  if (pathname === '/') return 'dashboard'
+  if (pathname.startsWith('/jobs')) return 'jobs'
+  if (pathname.startsWith('/apply-queue')) return 'apply-queue'
+  if (pathname.startsWith('/applications')) return 'applications'
+  if (pathname.startsWith('/documents')) return 'documents'
+  if (pathname.startsWith('/experience')) return 'experience'
+  if (pathname.startsWith('/settings')) return 'settings'
+  if (pathname.startsWith('/admin/calls')) return 'admin-calls'
+  if (pathname.startsWith('/admin/evals')) return 'admin-evals'
+  if (pathname.startsWith('/admin/prompts')) return 'admin-prompts'
+  return 'dashboard'
+}
 
 interface AppShellProps {
   children: React.ReactNode
 }
 
 export function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname()
+  const activePage = getActivePage(pathname)
+
   return (
     <div className="flex min-h-screen">
       <aside className="w-60 bg-white border-r border-zinc-200 fixed inset-y-0 z-20">
-        <Sidebar activePage="dashboard" />
+        <Sidebar activePage={activePage} />
       </aside>
       <main className="flex-1 ml-60">{children}</main>
     </div>
