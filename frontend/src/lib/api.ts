@@ -18,13 +18,17 @@ async function handleResponse<T>(res: Response): Promise<T> {
     }
     throw new ApiError(res.status, message)
   }
+  // 204 No Content (or any empty body) — return undefined for void callers
+  if (res.status === 204 || res.headers.get('content-length') === '0') {
+    return undefined as T
+  }
   return res.json() as Promise<T>
 }
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
 
-export async function listExperience(): Promise<ExperienceItem[]> {
-  const res = await fetch(`${BASE}/api/experience`)
+export async function listExperience(signal?: AbortSignal): Promise<ExperienceItem[]> {
+  const res = await fetch(`${BASE}/api/experience`, { signal })
   return handleResponse<ExperienceItem[]>(res)
 }
 
@@ -48,9 +52,7 @@ export async function updateExperience(id: string, payload: UpdateExperiencePayl
 
 export async function deleteExperience(id: string): Promise<void> {
   const res = await fetch(`${BASE}/api/experience/${id}`, { method: 'DELETE' })
-  if (!res.ok) {
-    throw new ApiError(res.status, res.statusText)
-  }
+  await handleResponse<void>(res)
 }
 
 export interface ImportResult {

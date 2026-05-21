@@ -39,6 +39,25 @@ export default function ExperiencePage() {
   const [isImporting, setIsImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => {
+    const controller = new AbortController()
+    listExperience(controller.signal)
+      .then(data => {
+        if (!controller.signal.aborted) {
+          setItems(data)
+          setIsLoading(false)
+          setLoadError(null)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setLoadError(err instanceof Error ? err.message : 'Failed to load experience items.')
+          setIsLoading(false)
+        }
+      })
+    return () => controller.abort()
+  }, [])
+
   async function fetchItems() {
     setIsLoading(true)
     setLoadError(null)
@@ -51,11 +70,6 @@ export default function ExperiencePage() {
       setIsLoading(false)
     }
   }
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchItems()
-  }, [])
 
   function handleAddClick() {
     setEditingItem(undefined)
@@ -92,15 +106,15 @@ export default function ExperiencePage() {
         toast.success('Item added.')
       }
       setIsFormOpen(false)
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save item.')
-      throw err
+    } catch {
+      // Error surface is the inline form error set by ExperienceForm's catch block
     } finally {
       setIsSaving(false)
     }
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    if (isImporting) return
     const file = e.target.files?.[0]
     if (!file) return
     setIsImporting(true)
@@ -140,6 +154,8 @@ export default function ExperiencePage() {
             type="file"
             accept=".pdf"
             className="hidden"
+            aria-label="Import PDF résumé"
+            disabled={isImporting}
             onChange={handleImport}
           />
           <button

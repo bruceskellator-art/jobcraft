@@ -38,6 +38,8 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // Resetting derived form state when the dialog reopens is intentional —
+    // this is a controlled reset, not a cascading render loop.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(buildInitialState(initialData))
     setTagsInput(initialData?.tags.join(', ') ?? '')
@@ -69,8 +71,13 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
   const inputClass = 'w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/40'
   const labelClass = 'block text-xs font-medium text-zinc-600 mb-1'
 
+  function handleOpenChange(next: boolean) {
+    if (!next && isSaving) return
+    onOpenChange(next)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{initialData ? 'Edit experience item' : 'Add experience item'}</DialogTitle>
@@ -78,8 +85,10 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
         <form onSubmit={handleSubmit} className="space-y-3 mt-1">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>Kind</label>
+              <label htmlFor="kind" className={labelClass}>Kind</label>
               <select
+                id="kind"
+                name="kind"
                 value={form.kind}
                 onChange={e => handleField('kind', e.target.value)}
                 className={inputClass}
@@ -90,8 +99,10 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
               </select>
             </div>
             <div>
-              <label className={labelClass}>Title</label>
+              <label htmlFor="title" className={labelClass}>Title</label>
               <input
+                id="title"
+                name="title"
                 type="text"
                 value={form.title ?? ''}
                 onChange={e => handleField('title', e.target.value)}
@@ -101,8 +112,10 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
             </div>
           </div>
           <div>
-            <label className={labelClass}>Organization</label>
+            <label htmlFor="organization" className={labelClass}>Organization</label>
             <input
+              id="organization"
+              name="organization"
               type="text"
               value={form.organization ?? ''}
               onChange={e => handleField('organization', e.target.value)}
@@ -112,8 +125,10 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelClass}>Start date</label>
+              <label htmlFor="start_date" className={labelClass}>Start date</label>
               <input
+                id="start_date"
+                name="start_date"
                 type="text"
                 value={form.start_date ?? ''}
                 onChange={e => handleField('start_date', e.target.value)}
@@ -122,8 +137,10 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
               />
             </div>
             <div>
-              <label className={labelClass}>End date</label>
+              <label htmlFor="end_date" className={labelClass}>End date</label>
               <input
+                id="end_date"
+                name="end_date"
                 type="text"
                 value={form.end_date ?? ''}
                 onChange={e => handleField('end_date', e.target.value)}
@@ -133,8 +150,10 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
             </div>
           </div>
           <div>
-            <label className={labelClass}>Content <span className="text-red-500">*</span></label>
+            <label htmlFor="content" className={labelClass}>Content <span className="text-red-500">*</span></label>
             <textarea
+              id="content"
+              name="content"
               value={form.content}
               onChange={e => handleField('content', e.target.value)}
               placeholder="Describe the achievement, skill, or experience…"
@@ -144,8 +163,10 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
             />
           </div>
           <div>
-            <label className={labelClass}>Tags (comma-separated)</label>
+            <label htmlFor="tags" className={labelClass}>Tags (comma-separated)</label>
             <input
+              id="tags"
+              name="tags"
               type="text"
               value={tagsInput}
               onChange={e => setTagsInput(e.target.value)}

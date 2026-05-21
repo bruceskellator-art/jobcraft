@@ -12,8 +12,8 @@ interface ExperienceCardProps {
 
 function getLogoInitials(organization?: string): string {
   if (!organization) return '?'
-  return organization
-    .split(/\s+/)
+  const words = organization.split(/\s+/).filter(Boolean)
+  return words
     .slice(0, 2)
     .map(w => w[0])
     .join('')
@@ -55,17 +55,17 @@ export function ExperienceCard({ item, onEdit, onDelete }: ExperienceCardProps) 
           </div>
         )}
       </div>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-none">
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex-none">
         <button
           onClick={onEdit}
-          className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"
+          className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
           aria-label="Edit item"
         >
           <PencilIcon size={13} />
         </button>
         <button
           onClick={onDelete}
-          className="p-1 rounded hover:bg-red-50 text-zinc-400 hover:text-red-600 transition-colors"
+          className="p-1 rounded hover:bg-red-50 text-zinc-400 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
           aria-label="Delete item"
         >
           <Trash2Icon size={13} />
