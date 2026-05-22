@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +11,9 @@ from app.db.base import get_session
 from app.db.models.user import User
 from app.llm.adapters.anthropic import AnthropicAdapter
 from app.llm.client import LLMClient
+from app.scrapers.base import JobSource
+from app.scrapers.greenhouse import GreenhouseSource
+from app.scrapers.lever import LeverSource
 
 # Phase-1 stand-in for real authentication.
 # Returns (or creates) a single fixed developer user so that all routes
@@ -50,3 +55,29 @@ def get_llm_client(
         app.dependency_overrides[get_llm_client] = lambda: LLMClient(session, MockAdapter(...))
     """
     return LLMClient(session=session, adapter=AnthropicAdapter())
+
+
+def get_source_factory() -> Callable[[list[str], list[str]], list[JobSource]]:
+    """Return a factory that builds JobSource instances from board/company lists.
+
+    The factory signature is:
+        (greenhouse_boards: list[str], lever_companies: list[str]) -> list[JobSource]
+
+    In tests, override this dependency to inject FakeSource instances
+    without making any network calls:
+
+        app.dependency_overrides[get_source_factory] = lambda: fake_factory
+    """
+
+    def _build(
+        greenhouse_boards: list[str],
+        lever_companies: list[str],
+    ) -> list[JobSource]:
+        sources: list[JobSource] = []
+        for board in greenhouse_boards:
+            sources.append(GreenhouseSource(board_token=board))  # type: ignore[arg-type]
+        for company in lever_companies:
+            sources.append(LeverSource(company=company))  # type: ignore[arg-type]
+        return sources
+
+    return _build
