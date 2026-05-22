@@ -1,0 +1,31 @@
+{
+  "jobs": [
+    {
+      "id": 1001,
+      "title": "Software Engineer",
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/1001",
+      "location": {"name": "Singapore"},
+      "content": "<p>We are hiring a software engineer to build scalable systems.</p>",
+      "updated_at": "2026-06-01T00:00:00Z",
+      "departments": [{"name": "Engineering"}]
+    },
+    {
+      "id": 1002,
+      "title": "Data Scientist",
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/1002",
+      "location": {"name": "Remote"},
+      "content": "<p>Join our data team. remote work available.</p>",
+      "updated_at": "2026-06-10T00:00:00Z",
+      "departments": [{"name": "Data"}]
+    },
+    {
+      "id": 1003,
+      "title": "Product Manager",
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/1003",
+      "location": {"name": "New York"},
+      "content": "<p>Lead product initiatives.</p>",
+      "updated_at": "2025-01-01T00:00:00Z",
+      "departments": [{"name": "Product"}]
+    }
+  ]
+}

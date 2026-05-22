@@ -1,0 +1,26 @@
+[
+  {
+    "id": "abc-123",
+    "text": "Backend Engineer",
+    "hostedUrl": "https://jobs.lever.co/acme/abc-123",
+    "categories": {"location": "Singapore", "commitment": "Full-time"},
+    "descriptionPlain": "Build backend services for our platform.",
+    "createdAt": 1780272000000
+  },
+  {
+    "id": "def-456",
+    "text": "ML Engineer",
+    "hostedUrl": "https://jobs.lever.co/acme/def-456",
+    "categories": {"location": "Remote", "commitment": "Remote"},
+    "descriptionPlain": "Work on machine learning pipelines. remote friendly.",
+    "createdAt": 1781049600000
+  },
+  {
+    "id": "ghi-789",
+    "text": "Sales Manager",
+    "hostedUrl": "https://jobs.lever.co/acme/ghi-789",
+    "categories": {"location": "London", "commitment": "Full-time"},
+    "descriptionPlain": "Lead sales operations.",
+    "createdAt": 1000000000000
+  }
+]
