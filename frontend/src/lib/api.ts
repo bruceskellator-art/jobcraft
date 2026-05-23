@@ -68,3 +68,28 @@ export async function importResume(file: File): Promise<ImportResult> {
   })
   return handleResponse<ImportResult>(res)
 }
+
+// --- Jobs ---
+
+import type { JobPosting } from '@/types/job'
+
+export interface ListJobsParams {
+  source?: string
+  q?: string
+}
+
+export async function listJobs(
+  params?: ListJobsParams,
+  signal?: AbortSignal,
+): Promise<JobPosting[]> {
+  const url = new URL(`${BASE}/api/jobs`)
+  if (params?.source) url.searchParams.set('source', params.source)
+  if (params?.q) url.searchParams.set('q', params.q)
+  const res = await fetch(url.toString(), { signal })
+  return handleResponse<JobPosting[]>(res)
+}
+
+export async function getJob(id: string, signal?: AbortSignal): Promise<JobPosting> {
+  const res = await fetch(`${BASE}/api/jobs/${id}`, { signal })
+  return handleResponse<JobPosting>(res)
+}
