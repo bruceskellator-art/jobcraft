@@ -49,8 +49,18 @@ class ScrapeRequest(BaseModel):
     extract: bool = False
 
 
+class ScrapeRunLogView(BaseModel):
+    """Per-source run statistics returned in the scrape response."""
+
+    source: str
+    total_listed: int
+    total_fetched: int
+    total_failed: int
+    total_new: int
+
+
 class ScrapeResponse(BaseModel):
     """Response body for POST /api/jobs/scrape."""
 
     created: int
-    runs: list[dict]
+    runs: list[ScrapeRunLogView]

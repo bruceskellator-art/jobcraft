@@ -197,7 +197,7 @@ class TestRunScrapeErrorIsolation:
         good_log = next(lg for lg in logs if lg.source == "fake:good")
         bad_log = next(lg for lg in logs if lg.source == "fake:bad")
         assert good_log.total_new == 1
-        assert bad_log.total_failed >= 1
+        assert bad_log.total_failed == 1
 
     async def test_mid_iteration_raise_counts_failed_but_keeps_prior_result(
         self, session
@@ -223,7 +223,7 @@ class TestRunScrapeErrorIsolation:
         assert len(created) == 1
         assert created[0].source_id == "job-10"
         # The raise itself is counted in failed
-        assert logs[0].total_failed >= 1
+        assert logs[0].total_failed == 1
 
 
 class TestRunScrapeExtraction:
@@ -271,3 +271,90 @@ class TestRunScrapeExtraction:
 
         # Assert — graceful: no extraction, no crash
         assert created[0].extracted is None
+
+
+# ---------------------------------------------------------------------------
+# Fix #4: dedup when source_id is None
+# ---------------------------------------------------------------------------
+
+_RAW_NO_ID = RawJobPosting(
+    source="fake:noid",
+    source_url="https://example.com/jobs/noid",
+    source_id=None,
+    company="NoID Corp",
+    title="Analyst",
+    location=None,
+    remote_policy=None,
+    raw_content="Identical content used for hashing.",
+)
+
+_RAW_NO_ID_DUPLICATE = RawJobPosting(
+    source="fake:noid",
+    source_url="https://example.com/jobs/noid-copy",
+    source_id=None,
+    company="NoID Corp",
+    title="Analyst",
+    location=None,
+    remote_policy=None,
+    raw_content="Identical content used for hashing.",
+)
+
+
+class TestRunScrapeDeduplicationNoSourceId:
+    """Two identical source_id=None postings must produce exactly one DB row."""
+
+    async def test_identical_no_id_postings_deduplicated(self, session) -> None:
+        # Arrange — two postings with source_id=None but identical content
+        source = FakeSource("fake:noid", [_RAW_NO_ID, _RAW_NO_ID_DUPLICATE])
+
+        # Act
+        created, logs = await run_scrape(session, [source], _FILTERS)
+        await session.commit()
+
+        # Assert — only one row persisted despite two items listed
+        assert len(created) == 1
+        log = logs[0]
+        assert log.total_listed == 2
+        assert log.total_new == 1
+        assert log.total_fetched == 2  # second is a duplicate, still fetched
+        assert log.total_failed == 0
+
+    async def test_no_id_posting_not_reinserted_on_second_run(self, session) -> None:
+        # Arrange — first run inserts via content hash
+        source_first = FakeSource("fake:noid", [_RAW_NO_ID])
+        await run_scrape(session, [source_first], _FILTERS)
+        await session.commit()
+
+        # Act — second run with same content
+        source_second = FakeSource("fake:noid", [_RAW_NO_ID])
+        created, logs = await run_scrape(session, [source_second], _FILTERS)
+        await session.commit()
+
+        # Assert — nothing new
+        assert len(created) == 0
+        assert logs[0].total_new == 0
+
+
+# ---------------------------------------------------------------------------
+# Fix #5: run-log invariant total_listed == total_fetched + total_failed
+# ---------------------------------------------------------------------------
+
+
+class TestRunScrapeLogInvariant:
+    """total_listed == total_fetched + total_failed must always hold."""
+
+    async def test_invariant_all_new(self, session) -> None:
+        source = FakeSource("fake:inv", [_RAW_A, _RAW_B])
+        _, logs = await run_scrape(session, [source], _FILTERS)
+        log = logs[0]
+        assert log.total_listed == log.total_fetched + log.total_failed
+
+    async def test_invariant_with_duplicate(self, session) -> None:
+        # Seed one posting, then scrape both (one dup, one new)
+        await run_scrape(session, [FakeSource("fake:inv2", [_RAW_A])], _FILTERS)
+        await session.commit()
+
+        source = FakeSource("fake:inv2", [_RAW_A, _RAW_B])
+        _, logs = await run_scrape(session, [source], _FILTERS)
+        log = logs[0]
+        assert log.total_listed == log.total_fetched + log.total_failed

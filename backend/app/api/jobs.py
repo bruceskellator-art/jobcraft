@@ -10,7 +10,7 @@ from app.db.base import get_session
 from app.deps import get_llm_client, get_source_factory
 from app.llm.client import LLMClient
 from app.repositories.job import JobRepository
-from app.schemas.job import JobPostingRead, ScrapeRequest, ScrapeResponse
+from app.schemas.job import JobPostingRead, ScrapeRequest, ScrapeResponse, ScrapeRunLogView
 from app.scrapers.base import JobSource
 from app.services.scrape import run_scrape
 
@@ -58,29 +58,34 @@ async def scrape_jobs(
 
     Builds JobSource instances via the injected source_factory so tests
     can override it to inject fake sources with no network calls.
+    Each owned adapter's HTTP client is closed in a finally block.
     """
     sources = source_factory(body.greenhouse_boards, body.lever_companies)
-
-    created_postings, logs = await run_scrape(
-        session=session,
-        sources=sources,
-        filters=body.filters,
-        llm=llm if body.extract else None,
-        extract=body.extract,
-    )
-
-    await session.commit()
+    try:
+        created_postings, logs = await run_scrape(
+            session=session,
+            sources=sources,
+            filters=body.filters,
+            llm=llm if body.extract else None,
+            extract=body.extract,
+        )
+        await session.commit()
+    finally:
+        for src in sources:
+            aclose = getattr(src, "aclose", None)
+            if callable(aclose):
+                await aclose()
 
     return ScrapeResponse(
         created=len(created_postings),
         runs=[
-            {
-                "source": log.source,
-                "total_listed": log.total_listed,
-                "total_fetched": log.total_fetched,
-                "total_failed": log.total_failed,
-                "total_new": log.total_new,
-            }
+            ScrapeRunLogView(
+                source=log.source,
+                total_listed=log.total_listed,
+                total_fetched=log.total_fetched,
+                total_failed=log.total_failed,
+                total_new=log.total_new,
+            )
             for log in logs
         ],
     )

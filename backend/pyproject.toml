@@ -21,6 +21,7 @@ dependencies = [
     "jinja2",
     "pypdf>=4.0",
     "python-multipart",
+    "tenacity",
 ]
 
 [project.optional-dependencies]

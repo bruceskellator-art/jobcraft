@@ -4,8 +4,8 @@ import json
 
 from app.llm.adapters.mock import MockAdapter
 from app.llm.client import LLMClient
-from app.scrapers.nl_filters import parse_filters
 from app.scrapers.types import JobFilters
+from app.services.nl_filters import parse_filters
 
 _CANNED_FILTERS = {
     "keywords": ["forward deployed", "AI engineer"],

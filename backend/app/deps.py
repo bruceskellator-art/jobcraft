@@ -63,6 +63,11 @@ def get_source_factory() -> Callable[[list[str], list[str]], list[JobSource]]:
     The factory signature is:
         (greenhouse_boards: list[str], lever_companies: list[str]) -> list[JobSource]
 
+    Each adapter created here owns its own httpx.AsyncClient.  The caller is
+    responsible for calling ``aclose()`` on every source when done — or using
+    each adapter as an async context manager.  The ``scrape_jobs`` route does
+    this in a ``finally`` block.
+
     In tests, override this dependency to inject FakeSource instances
     without making any network calls:
 

@@ -10,6 +10,18 @@ from app.scrapers.types import RawJobPosting
 
 logger = logging.getLogger(__name__)
 
+_LIKE_ESCAPE = "\\"
+
+
+def _escape_like(value: str) -> str:
+    """Escape backslash, percent, and underscore for use in a LIKE pattern."""
+    return (
+        value
+        .replace(_LIKE_ESCAPE, _LIKE_ESCAPE * 2)
+        .replace("%", f"{_LIKE_ESCAPE}%")
+        .replace("_", f"{_LIKE_ESCAPE}_")
+    )
+
 
 class JobRepository:
     """Data-access layer for JobPosting records.
@@ -34,20 +46,21 @@ class JobRepository:
         Args:
             source: Exact match on the source field (e.g. "greenhouse:acme").
             query: Case-insensitive substring match against title OR company.
+                   Wildcards (%, _) in the query are treated as literals.
             limit: Maximum number of results to return.
         """
         stmt = select(JobPosting)
         if source is not None:
             stmt = stmt.where(JobPosting.source == source)
         if query is not None:
-            pattern = f"%{query}%"
+            pattern = f"%{_escape_like(query)}%"
             stmt = stmt.where(
                 or_(
-                    JobPosting.title.ilike(pattern),
-                    JobPosting.company.ilike(pattern),
+                    JobPosting.title.ilike(pattern, escape=_LIKE_ESCAPE),
+                    JobPosting.company.ilike(pattern, escape=_LIKE_ESCAPE),
                 )
             )
-        stmt = stmt.limit(limit)
+        stmt = stmt.order_by(JobPosting.scraped_at.desc()).limit(limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

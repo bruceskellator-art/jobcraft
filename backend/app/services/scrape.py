@@ -8,6 +8,7 @@ from app.extractor.service import extract_job
 from app.llm.client import LLMClient
 from app.repositories.job import JobRepository
 from app.scrapers.base import JobSource
+from app.scrapers.dedupe import content_hash
 from app.scrapers.types import JobFilters, RawJobPosting, ScrapeRunLog
 
 logger = logging.getLogger(__name__)
@@ -26,11 +27,14 @@ async def run_scrape(
     For each source:
     - Iterates list_jobs(filters).
     - Skips postings whose (source, source_id) already exist in the DB.
+      When source_id is None, uses content_hash as the dedup key.
     - Optionally calls extract_job when extract=True and llm is provided.
     - Accumulates a ScrapeRunLog per source.
 
     A source that raises mid-iteration is caught, logged, and counted in
     total_failed — it never aborts the rest of the run.
+
+    Invariant: total_listed == total_fetched + total_failed
 
     Returns:
         A tuple of (created_postings, per_source_logs).
@@ -40,6 +44,10 @@ async def run_scrape(
     all_logs: list[ScrapeRunLog] = []
 
     for source in sources:
+        # total_fetched = successfully processed items (new + duplicate)
+        # total_new     = subset of fetched that were newly persisted
+        # total_failed  = items (or source errors) that raised non-fatally
+        # Invariant: total_listed == total_fetched + total_failed
         total_listed = 0
         total_fetched = 0
         total_failed = 0
@@ -55,16 +63,14 @@ async def run_scrape(
                     llm=llm,
                     extract=extract,
                 )
-                if posting is None:
-                    # duplicate — skip
-                    total_fetched += 1
-                    continue
                 if posting is _FAILED_SENTINEL:
                     total_failed += 1
-                    continue
-                total_fetched += 1
-                total_new += 1
-                all_created.append(posting)
+                else:
+                    # None means duplicate — still counts as fetched
+                    total_fetched += 1
+                    if posting is not None:
+                        total_new += 1
+                        all_created.append(posting)
         except Exception:
             logger.exception("run_scrape: source %s raised unexpectedly", source.name)
             total_failed += 1
@@ -96,13 +102,20 @@ async def _process_one(
     """Persist one raw posting.
 
     Returns:
-        The created JobPosting on success.
+        The created JobPosting on success (new item).
         None if the posting already exists (duplicate).
         _FAILED_SENTINEL if a non-fatal error occurred.
     """
     try:
         if raw.source_id is not None:
             existing = await repo.get_by_source(raw.source, raw.source_id)
+            if existing is not None:
+                return None
+        else:
+            # No source_id — use content hash as dedup key so identical
+            # postings aren't double-inserted across runs.
+            hash_key = content_hash(raw)
+            existing = await repo.get_by_source(raw.source, hash_key)
             if existing is not None:
                 return None
 
@@ -118,6 +131,13 @@ async def _process_one(
                     raw.source,
                     raw.source_id,
                 )
+
+        # When source_id is None, persist the content hash as source_id so
+        # future runs can dedup via get_by_source.
+        if raw.source_id is None:
+            from dataclasses import replace  # local import to avoid top-level cycle
+
+            raw = replace(raw, source_id=content_hash(raw))
 
         return await repo.create_from_raw(raw, extracted_dict)
 

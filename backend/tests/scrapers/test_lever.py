@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -10,6 +11,11 @@ from app.scrapers.lever import LeverSource
 from app.scrapers.types import JobFilters
 
 _FIXTURES = Path(__file__).parent / "fixtures"
+
+# Fixed reference point so date-window assertions never depend on wall clock.
+# Fixture epochs (ms): abc-123=2026-06-01 (~23d), def-456=2026-06-10 (~14d),
+# ghi-789=2001-09-09 (~9053d) — all relative to _NOW.
+_NOW = datetime(2026, 6, 24, tzinfo=UTC)
 
 
 def _make_transport(postings: list) -> httpx.MockTransport:
@@ -42,13 +48,14 @@ def source(postings_data: list) -> LeverSource:
 
 class TestLeverListJobs:
     async def test_parses_recent_postings(self, source: LeverSource) -> None:
-        # Arrange
+        # Arrange — 365-day window from fixed NOW (2026-06-24).
+        # abc-123 (~23d) and def-456 (~14d) pass; ghi-789 (~9053d) is excluded.
         filters = JobFilters(posted_within_days=365)
 
         # Act
-        postings = [p async for p in source.list_jobs(filters)]
+        postings = [p async for p in source.list_jobs(filters, now=_NOW)]
 
-        # Assert — 2 recent, 1 old (Sept 2001)
+        # Assert — 2 recent, 1 old (2001-09-09)
         assert len(postings) == 2
 
     async def test_keyword_filter_narrows_results(self, source: LeverSource) -> None:
@@ -56,7 +63,7 @@ class TestLeverListJobs:
         filters = JobFilters(keywords=["backend"], posted_within_days=365)
 
         # Act
-        postings = [p async for p in source.list_jobs(filters)]
+        postings = [p async for p in source.list_jobs(filters, now=_NOW)]
 
         # Assert
         assert len(postings) == 1
@@ -72,7 +79,7 @@ class TestLeverListJobs:
         filters = JobFilters(posted_within_days=365)
 
         # Act — should not raise
-        postings = [p async for p in source.list_jobs(filters)]
+        postings = [p async for p in source.list_jobs(filters, now=_NOW)]
 
         # Assert — valid ones still returned
         assert len(postings) == 2
@@ -91,12 +98,13 @@ class TestLeverListJobs:
 
 class TestLeverFiltering:
     async def test_date_filter_excludes_old_jobs(self, source: LeverSource) -> None:
-        # Arrange — tight 30-day window
+        # Arrange — 30-day window from fixed NOW (2026-06-24).
+        # ghi-789 (~9053d ago) must be excluded.
         filters = JobFilters(posted_within_days=30)
 
         # Act
-        postings = [p async for p in source.list_jobs(filters)]
+        postings = [p async for p in source.list_jobs(filters, now=_NOW)]
 
-        # Assert — old job (Sept 2001) excluded
+        # Assert — old job (2001-09-09) excluded
         titles = [p.title for p in postings]
         assert "Sales Manager" not in titles

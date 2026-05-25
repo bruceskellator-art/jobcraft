@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
@@ -10,6 +11,10 @@ from app.scrapers.greenhouse import GreenhouseSource
 from app.scrapers.types import JobFilters
 
 _FIXTURES = Path(__file__).parent / "fixtures"
+
+# Fixed reference point so date-window assertions never depend on wall clock.
+# Fixture dates: 2026-06-01, 2026-06-10 (recent), 2025-01-01 (~540 days before NOW).
+_NOW = datetime(2026, 6, 24, tzinfo=UTC)
 
 
 def _make_transport(jobs_data: dict) -> httpx.MockTransport:
@@ -43,13 +48,15 @@ def source(jobs_data: dict) -> GreenhouseSource:
 
 class TestGreenhouseListJobs:
     async def test_parses_recent_postings(self, source: GreenhouseSource) -> None:
-        # Arrange
-        filters = JobFilters(posted_within_days=365)  # wide window to capture all fixtures
+        # Arrange — 365-day window from fixed NOW (2026-06-24).
+        # Fixtures: 2026-06-01 (~23d ago) and 2026-06-10 (~14d ago) pass;
+        # 2025-01-01 (~540d ago) is excluded.
+        filters = JobFilters(posted_within_days=365)
 
         # Act
-        postings = [p async for p in source.list_jobs(filters)]
+        postings = [p async for p in source.list_jobs(filters, now=_NOW)]
 
-        # Assert — 2 recent jobs pass; 2025-01-01 is ~540 days ago, outside 365d window
+        # Assert
         assert len(postings) == 2
 
     async def test_keyword_filter_narrows_results(self, source: GreenhouseSource) -> None:
@@ -57,7 +64,7 @@ class TestGreenhouseListJobs:
         filters = JobFilters(keywords=["software engineer"], posted_within_days=365)
 
         # Act
-        postings = [p async for p in source.list_jobs(filters)]
+        postings = [p async for p in source.list_jobs(filters, now=_NOW)]
 
         # Assert — only "Software Engineer" matches
         assert len(postings) == 1
@@ -74,7 +81,7 @@ class TestGreenhouseListJobs:
         filters = JobFilters(posted_within_days=365)
 
         # Act — should not raise
-        postings = [p async for p in source.list_jobs(filters)]
+        postings = [p async for p in source.list_jobs(filters, now=_NOW)]
 
         # Assert — malformed posting is skipped; valid ones still returned
         assert len(postings) >= 2
@@ -93,11 +100,12 @@ class TestGreenhouseListJobs:
 
 class TestGreenhouseFiltering:
     async def test_date_filter_excludes_old_jobs(self, source: GreenhouseSource) -> None:
-        # Arrange — 30-day window; the 2025-01-01 job should be excluded
+        # Arrange — 30-day window from fixed NOW (2026-06-24).
+        # 2025-01-01 (~540d ago) must be excluded; 2026-06-01 (~23d ago) is inside.
         filters = JobFilters(posted_within_days=30)
 
         # Act
-        postings = [p async for p in source.list_jobs(filters)]
+        postings = [p async for p in source.list_jobs(filters, now=_NOW)]
 
         # Assert — old job (2025-01-01) is excluded
         titles = [p.title for p in postings]
