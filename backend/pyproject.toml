@@ -22,6 +22,7 @@ dependencies = [
     "pypdf>=4.0",
     "python-multipart",
     "tenacity",
+    "qdrant-client>=1.9",
 ]
 
 [project.optional-dependencies]
