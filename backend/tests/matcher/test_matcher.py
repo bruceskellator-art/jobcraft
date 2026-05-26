@@ -1,3 +1,10 @@
+"""Tests for the two-stage matcher service.
+
+Prefilter fix: the user corpus is embedded ONCE via index_user_experience and
+stored in the vector store. prefilter_score reads stored vectors — it ONLY
+embeds the JD text, never the corpus.
+"""
+
 from __future__ import annotations
 
 import json
@@ -10,6 +17,7 @@ from app.embeddings.fake import FakeEmbeddingAdapter
 from app.llm.adapters.mock import MockAdapter
 from app.llm.client import LLMClient
 from app.matcher.service import compute_match, prefilter_score
+from app.services.embed_pipeline import index_user_experience
 from app.vectorstore.memory import InMemoryVectorStore
 
 _MATCH_RESULT_DICT = {
@@ -66,13 +74,15 @@ async def _seed_user_with_items(session, n: int = 2) -> tuple[User, list[Experie
 
 class TestPrefilterScore:
     async def test_score_in_range(self, session) -> None:
-        # Arrange
+        # Arrange — index corpus first, then call prefilter (no corpus re-embed)
         user, _ = await _seed_user_with_items(session)
         job = _make_job()
         embed = FakeEmbeddingAdapter(dim=128)
+        store = InMemoryVectorStore()
+        await index_user_experience(session, embed, store, user.id)
 
         # Act
-        score = await prefilter_score(session, embed, user.id, job)
+        score = await prefilter_score(embed, store, user.id, job)
 
         # Assert
         assert -1.0 <= score <= 1.0
@@ -92,25 +102,57 @@ class TestPrefilterScore:
             extracted=None,
         )
         embed = FakeEmbeddingAdapter(dim=512)
+        store = InMemoryVectorStore()
+        await index_user_experience(session, embed, store, user.id)
 
         # Act
-        score_match = await prefilter_score(session, embed, user.id, job_match)
-        score_miss = await prefilter_score(session, embed, user.id, job_miss)
+        score_match = await prefilter_score(embed, store, user.id, job_match)
+        score_miss = await prefilter_score(embed, store, user.id, job_miss)
 
         # Assert — overlapping JD scores higher
         assert score_match > score_miss
 
     async def test_returns_zero_when_no_experience(self, session) -> None:
-        # Arrange
+        # Arrange — user has no indexed vectors (nothing indexed)
         user_id = uuid.uuid4()
         job = _make_job()
         embed = FakeEmbeddingAdapter(dim=64)
+        store = InMemoryVectorStore()
 
-        # Act
-        score = await prefilter_score(session, embed, user_id, job)
+        # Act — no index_user_experience called; store is empty
+        score = await prefilter_score(embed, store, user_id, job)
 
         # Assert
         assert score == 0.0
+
+    async def test_prefilter_does_not_embed_corpus(self, session) -> None:
+        """After indexing, prefilter_score calls embed.embed exactly once (JD only)."""
+        # Arrange
+        user, _ = await _seed_user_with_items(session)
+        job = _make_job()
+        embed = FakeEmbeddingAdapter(dim=64)
+        store = InMemoryVectorStore()
+        await index_user_experience(session, embed, store, user.id)
+
+        # Wrap embed.embed to count calls
+        original_embed = embed.embed
+        call_count = 0
+        call_texts: list[list[str]] = []
+
+        async def counting_embed(texts: list[str]) -> list[list[float]]:
+            nonlocal call_count
+            call_count += 1
+            call_texts.append(list(texts))
+            return await original_embed(texts)
+
+        embed.embed = counting_embed  # type: ignore[method-assign]
+
+        # Act
+        await prefilter_score(embed, store, user.id, job)
+
+        # Assert — exactly one embed call, and it is for the JD (single text), not corpus
+        assert call_count == 1, f"Expected 1 embed call, got {call_count}"
+        assert len(call_texts[0]) == 1, "Expected a single-text embed call for the JD"
 
 
 class TestComputeMatch:
@@ -123,6 +165,8 @@ class TestComputeMatch:
 
         embed = FakeEmbeddingAdapter(dim=128)
         store = InMemoryVectorStore()
+        # Index user so prefilter can read stored vectors
+        await index_user_experience(session, embed, store, user.id)
         adapter = MockAdapter(responses=[_MATCH_RESULT_JSON])
         llm = LLMClient(session=session, adapter=adapter)
 
@@ -149,6 +193,7 @@ class TestComputeMatch:
 
         embed = FakeEmbeddingAdapter(dim=128)
         store = InMemoryVectorStore()
+        await index_user_experience(session, embed, store, user.id)
 
         # First call
         adapter1 = MockAdapter(responses=[_MATCH_RESULT_JSON])

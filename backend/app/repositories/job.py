@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import builtins
 import logging
+import uuid
+from datetime import datetime
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.job_posting import JobPosting
+from app.db.models.match import Match
 from app.scrapers.types import RawJobPosting
 
 logger = logging.getLogger(__name__)
@@ -77,6 +81,58 @@ class JobRepository:
             )
         )
         return result.scalar_one_or_none()
+
+    async def list_with_matches(
+        self,
+        user_id: uuid.UUID,
+        *,
+        source: str | None = None,
+        query: str | None = None,
+        limit: int = 100,
+    ) -> builtins.list[builtins.tuple[JobPosting, Match | None]]:
+        """Return job postings paired with the latest Match for *user_id*.
+
+        Two queries are issued (jobs, then their matches) and the results are
+        stitched in Python to avoid N+1 queries.
+
+        Args:
+            user_id: The user whose matches are fetched.
+            source:  Optional exact filter on JobPosting.source.
+            query:   Optional case-insensitive substring on title OR company.
+            limit:   Maximum number of job postings to return.
+
+        Returns:
+            A list of (JobPosting, Match | None) tuples ordered by scraped_at desc.
+        """
+        jobs = await self.list(source=source, query=query, limit=limit)
+        if not jobs:
+            return []
+
+        job_ids = [j.id for j in jobs]
+
+        # Fetch the most-recent Match per job for this user in one query.
+        # We use a subquery-free approach: fetch all matches for these jobs
+        # then keep the one with the latest computed_at per job_id in Python.
+        match_result = await self._session.execute(
+            select(Match).where(
+                Match.user_id == user_id,
+                Match.job_id.in_(job_ids),
+            )
+        )
+        all_matches = list(match_result.scalars().all())
+
+        # Build a map: job_id -> latest Match (by computed_at).
+        latest_match: dict[uuid.UUID, Match] = {}
+        for m in all_matches:
+            existing = latest_match.get(m.job_id)
+            m_ts: datetime | None = m.computed_at  # type: ignore[assignment]
+            ex_ts: datetime | None = existing.computed_at if existing is not None else None  # type: ignore[assignment]
+            if existing is None or (
+                m_ts is not None and (ex_ts is None or m_ts > ex_ts)
+            ):
+                latest_match[m.job_id] = m
+
+        return [(job, latest_match.get(job.id)) for job in jobs]
 
     async def create_from_raw(
         self,

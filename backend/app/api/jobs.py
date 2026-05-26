@@ -7,10 +7,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_session
-from app.deps import get_llm_client, get_source_factory
+from app.db.models.job_posting import JobPosting
+from app.db.models.match import Match as MatchModel
+from app.db.models.user import User
+from app.deps import get_current_user, get_llm_client, get_source_factory
 from app.llm.client import LLMClient
 from app.repositories.job import JobRepository
 from app.schemas.job import JobPostingRead, ScrapeRequest, ScrapeResponse, ScrapeRunLogView
+from app.schemas.match import MatchRead
 from app.scrapers.base import JobSource
 from app.services.scrape import run_scrape
 
@@ -25,11 +29,25 @@ def _get_repo(session: AsyncSession = Depends(get_session)) -> JobRepository:  #
 async def list_jobs(
     source: str | None = None,
     q: str | None = None,
-    repo: JobRepository = Depends(_get_repo),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
 ) -> list[JobPostingRead]:
-    """List job postings with optional source and full-text query filters."""
-    items = await repo.list(source=source, query=q)
-    return items  # type: ignore[return-value]
+    """List job postings with optional source and full-text query filters.
+
+    Each posting includes the current user's latest Match (or null if not matched).
+    """
+    repo = JobRepository(session)
+    pairs: list[tuple[JobPosting, MatchModel | None]] = await repo.list_with_matches(
+        current_user.id, source=source, query=q
+    )
+    out: list[JobPostingRead] = []
+    for job, match in pairs:
+        read = JobPostingRead.model_validate(job)
+        read = read.model_copy(
+            update={"match": MatchRead.model_validate(match) if match is not None else None}
+        )
+        out.append(read)
+    return out
 
 
 @router.get("/{job_id}", response_model=JobPostingRead)

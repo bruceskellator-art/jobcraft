@@ -9,11 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.db.base import get_session
 from app.db.models.user import User
+from app.embeddings.base import EmbeddingClient
+from app.embeddings.openai_adapter import OpenAIEmbeddingAdapter
 from app.llm.adapters.anthropic import AnthropicAdapter
 from app.llm.client import LLMClient
 from app.scrapers.base import JobSource
 from app.scrapers.greenhouse import GreenhouseSource
 from app.scrapers.lever import LeverSource
+from app.vectorstore.base import VectorStore
+from app.vectorstore.qdrant_adapter import QdrantVectorStore
 
 # Phase-1 stand-in for real authentication.
 # Returns (or creates) a single fixed developer user so that all routes
@@ -55,6 +59,27 @@ def get_llm_client(
         app.dependency_overrides[get_llm_client] = lambda: LLMClient(session, MockAdapter(...))
     """
     return LLMClient(session=session, adapter=AnthropicAdapter())
+
+
+def get_embedding_client() -> EmbeddingClient:
+    """Build an OpenAIEmbeddingAdapter for production use.
+
+    Reads OPENAI_API_KEY from the environment. In tests, override with
+    FakeEmbeddingAdapter to avoid network calls:
+
+        app.dependency_overrides[get_embedding_client] = lambda: FakeEmbeddingAdapter()
+    """
+    return OpenAIEmbeddingAdapter()
+
+
+def get_vector_store() -> VectorStore:
+    """Build a QdrantVectorStore pointed at the configured qdrant_url.
+
+    In tests, override with InMemoryVectorStore to avoid a Qdrant connection:
+
+        app.dependency_overrides[get_vector_store] = lambda: InMemoryVectorStore()
+    """
+    return QdrantVectorStore(url=get_settings().qdrant_url)
 
 
 def get_source_factory() -> Callable[[list[str], list[str]], list[JobSource]]:

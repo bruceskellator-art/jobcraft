@@ -5,6 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.match import MatchRead
 from app.scrapers.types import JobFilters
 
 
@@ -38,6 +39,7 @@ class JobPostingRead(BaseModel):
     remote_policy: str | None
     scraped_at: datetime | None
     extracted: dict | None
+    match: MatchRead | None = None
 
 
 class ScrapeRequest(BaseModel):

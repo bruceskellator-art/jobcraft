@@ -117,3 +117,75 @@ async def user_corpus_vectors(
 
     texts = [item.content for item in items]
     return await embed.embed(texts)
+
+
+async def get_user_vectors(store: VectorStore, user_id: uuid.UUID) -> list[list[float]]:
+    """Fetch already-indexed experience vectors for user_id from the vector store.
+
+    Returns the raw float vectors stored in COLLECTION_USER_EXPERIENCE for the
+    given user. Returns an empty list when the user has not yet been indexed.
+
+    This is the correct prefilter path: the corpus is embedded ONCE via
+    ``index_user_experience``; subsequent prefilter calls read stored vectors
+    rather than re-embedding from the database.
+
+    Implementation strategy
+    -----------------------
+    The VectorStore Protocol's ``search`` method performs ANN (approximate
+    nearest-neighbour) lookup and requires a query vector of the correct
+    dimension.  Since we need *all* vectors for a user (not a ranked subset),
+    we bypass ``search`` entirely and read from the store's internal state:
+
+    - InMemoryVectorStore exposes ``_collections`` (dict of VectorPoint).
+    - QdrantVectorStore exposes ``_client`` with a ``scroll`` API that returns
+      points with vectors when ``with_vectors=True``.
+    - Any other store that exposes ``_collections`` in the same shape is also
+      supported automatically.
+    """
+    # InMemoryVectorStore (and any store with the same _collections shape)
+    internal = getattr(store, "_collections", None)
+    if internal is not None:
+        collection: dict = internal.get(COLLECTION_USER_EXPERIENCE, {})
+        uid_str = str(user_id)
+        return [
+            vp.vector
+            for vp in collection.values()
+            if vp.payload.get("user_id") == uid_str
+        ]
+
+    # QdrantVectorStore: use scroll to retrieve points with vectors.
+    qdrant_client = getattr(store, "_client", None)
+    if qdrant_client is not None:
+        try:
+            from qdrant_client.http import models as qmodels
+
+            scroll_result, _ = await qdrant_client.scroll(
+                collection_name=COLLECTION_USER_EXPERIENCE,
+                scroll_filter=qmodels.Filter(
+                    must=[
+                        qmodels.FieldCondition(
+                            key="user_id",
+                            match=qmodels.MatchValue(value=str(user_id)),
+                        )
+                    ]
+                ),
+                with_vectors=True,
+                limit=1000,
+            )
+            return [
+                list(p.vector) if not isinstance(p.vector, list) else p.vector
+                for p in scroll_result
+                if p.vector is not None
+            ]
+        except Exception:
+            logger.warning(
+                "get_user_vectors: failed to scroll Qdrant for user %s", user_id
+            )
+            return []
+
+    # Unknown store type — cannot retrieve raw vectors.
+    logger.warning(
+        "get_user_vectors: unsupported store type %s, returning empty corpus",
+        type(store).__name__,
+    )
+    return []

@@ -32,7 +32,7 @@ from app.db.models.prompt_version import PromptVersion
 from app.embeddings.base import EmbeddingClient
 from app.matcher.types import MatchResult
 from app.repositories.match import MatchRepository
-from app.services.embed_pipeline import _compose_jd_text, user_corpus_vectors
+from app.services.embed_pipeline import _compose_jd_text, get_user_vectors
 from app.vectorstore.base import VectorStore
 
 logger = logging.getLogger(__name__)
@@ -140,18 +140,23 @@ async def ensure_match_prompt(session: AsyncSession) -> PromptVersion:
 
 
 async def prefilter_score(
-    session: AsyncSession,
     embed: EmbeddingClient,
+    store: VectorStore,
     user_id: uuid.UUID,
     job: JobPosting,
 ) -> float:
     """Stage 1: cosine similarity between JD embedding and user corpus centroid.
 
-    Returns a float in [-1, 1]. Returns 0.0 if the user has no experience items.
+    The user corpus MUST have been indexed via ``index_user_experience`` before
+    calling this function. This function embeds ONLY the JD text and computes
+    cosine against the mean of the user's already-stored vectors — no DB reads,
+    no corpus re-embedding.
+
+    Returns a float in [-1, 1]. Returns 0.0 if the user has no indexed vectors.
     """
-    corpus = await user_corpus_vectors(session, embed, user_id)
+    corpus = await get_user_vectors(store, user_id)
     if not corpus:
-        logger.debug("prefilter_score: user %s has no experience items", user_id)
+        logger.debug("prefilter_score: no stored vectors for user %s", user_id)
         return 0.0
 
     jd_text = _compose_jd_text(job)
@@ -220,7 +225,7 @@ async def compute_match(
     constraint via MatchRepository.upsert — a second call updates the row rather
     than inserting a duplicate.
     """
-    stage1 = await prefilter_score(session, embed, user_id, job)
+    stage1 = await prefilter_score(embed, store, user_id, job)
 
     # Load experience items for the LLM call
     result = await session.execute(
