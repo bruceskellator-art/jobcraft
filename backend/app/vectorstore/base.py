@@ -42,3 +42,11 @@ class VectorStore(Protocol):
     ) -> list[ScoredPoint]:
         """Return up to top_k nearest neighbours, optionally filtered by payload."""
         ...
+
+    async def get_vectors_by_payload(
+        self,
+        collection: str,
+        payload_filter: dict,
+    ) -> list[list[float]]:
+        """Return all stored vectors whose payload matches the filter, unranked."""
+        ...

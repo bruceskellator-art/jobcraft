@@ -30,9 +30,10 @@ from app.db.models.job_posting import JobPosting
 from app.db.models.match import Match
 from app.db.models.prompt_version import PromptVersion
 from app.embeddings.base import EmbeddingClient
+from app.llm.client import LLMClient
 from app.matcher.types import MatchResult
 from app.repositories.match import MatchRepository
-from app.services.embed_pipeline import _compose_jd_text, get_user_vectors
+from app.services.embed_pipeline import COLLECTION_USER_EXPERIENCE, _compose_jd_text
 from app.vectorstore.base import VectorStore
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,11 @@ def _centroid(vectors: list[list[float]]) -> list[float]:
     if not vectors:
         return []
     dim = len(vectors[0])
+    for vec in vectors:
+        if len(vec) != dim:
+            raise ValueError(
+                f"Dimension mismatch in centroid: expected {dim}, got {len(vec)}"
+            )
     total = [0.0] * dim
     for vec in vectors:
         for i, v in enumerate(vec):
@@ -103,7 +109,9 @@ def _centroid(vectors: list[list[float]]) -> list[float]:
 async def ensure_match_prompt(session: AsyncSession) -> PromptVersion:
     """Return the active score_match PromptVersion, creating it if absent.
 
-    Idempotent: safe under concurrent callers via IntegrityError retry.
+    Idempotent: safe under concurrent callers — the speculative insert is
+    scoped to a savepoint so an IntegrityError rolls back only that insert
+    and leaves the outer transaction intact.
     """
     result = await session.execute(
         select(PromptVersion).where(
@@ -123,12 +131,12 @@ async def ensure_match_prompt(session: AsyncSession) -> PromptVersion:
         temperature=_PROMPT_TEMPERATURE,
         is_active=True,
     )
-    session.add(prompt)
     try:
-        await session.flush()
-        await session.refresh(prompt)
+        async with session.begin_nested():
+            session.add(prompt)
+            await session.flush()
+            await session.refresh(prompt)
     except IntegrityError:
-        await session.rollback()
         result = await session.execute(
             select(PromptVersion).where(
                 PromptVersion.name == _PROMPT_NAME,
@@ -154,7 +162,9 @@ async def prefilter_score(
 
     Returns a float in [-1, 1]. Returns 0.0 if the user has no indexed vectors.
     """
-    corpus = await get_user_vectors(store, user_id)
+    corpus = await store.get_vectors_by_payload(
+        COLLECTION_USER_EXPERIENCE, {"user_id": str(user_id)}
+    )
     if not corpus:
         logger.debug("prefilter_score: no stored vectors for user %s", user_id)
         return 0.0
@@ -171,7 +181,7 @@ async def prefilter_score(
 
 async def judge_match(
     session: AsyncSession,
-    llm: object,
+    llm: LLMClient,
     job: JobPosting,
     experience_items: list[ExperienceItem],
 ) -> MatchResult:
@@ -179,10 +189,6 @@ async def judge_match(
 
     Sends the JD and experience items to the LLM and returns a parsed MatchResult.
     """
-    from app.llm.client import LLMClient
-
-    assert isinstance(llm, LLMClient)
-
     prompt = await ensure_match_prompt(session)
 
     jd_text = _compose_jd_text(job)
@@ -205,7 +211,7 @@ async def judge_match(
 
 async def compute_match(
     session: AsyncSession,
-    llm: object,
+    llm: LLMClient,
     embed: EmbeddingClient,
     store: VectorStore,
     user_id: uuid.UUID,

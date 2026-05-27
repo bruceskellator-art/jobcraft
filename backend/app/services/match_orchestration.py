@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models.job_posting import JobPosting
 from app.db.models.match import Match
 from app.embeddings.base import EmbeddingClient
+from app.llm.client import LLMClient
 from app.matcher.service import compute_match
 from app.services.embed_pipeline import index_job, index_user_experience
 from app.vectorstore.base import VectorStore
@@ -44,7 +45,7 @@ async def ensure_user_indexed(
 
 async def match_job(
     session: AsyncSession,
-    llm: object,
+    llm: LLMClient,
     embed: EmbeddingClient,
     store: VectorStore,
     user_id: uuid.UUID,
@@ -67,7 +68,7 @@ async def match_job(
 
 async def match_all_jobs(
     session: AsyncSession,
-    llm: object,
+    llm: LLMClient,
     embed: EmbeddingClient,
     store: VectorStore,
     user_id: uuid.UUID,
@@ -96,8 +97,9 @@ async def match_all_jobs(
     matched = 0
     for job in jobs:
         try:
-            await index_job(embed, store, job)
-            await compute_match(session, llm, embed, store, user_id, job)
+            async with session.begin_nested():
+                await index_job(embed, store, job)
+                await compute_match(session, llm, embed, store, user_id, job)
             matched += 1
         except Exception:
             logger.exception(

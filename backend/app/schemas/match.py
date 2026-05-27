@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel
 
@@ -25,6 +24,6 @@ class MatchRead(BaseModel):
     id: uuid.UUID
     overall_score: float
     dimension_scores: dict[str, float]
-    gaps: list[Any]
+    gaps: list[GapView]
     rationale: str
     computed_at: datetime | None

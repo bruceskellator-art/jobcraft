@@ -3,7 +3,6 @@ from __future__ import annotations
 import builtins
 import logging
 import uuid
-from datetime import datetime
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -114,22 +113,21 @@ class JobRepository:
         # We use a subquery-free approach: fetch all matches for these jobs
         # then keep the one with the latest computed_at per job_id in Python.
         match_result = await self._session.execute(
-            select(Match).where(
+            select(Match)
+            .where(
                 Match.user_id == user_id,
                 Match.job_id.in_(job_ids),
             )
+            .order_by(Match.computed_at.desc().nulls_last())
         )
         all_matches = list(match_result.scalars().all())
 
-        # Build a map: job_id -> latest Match (by computed_at).
+        # Build a map: job_id -> latest Match (by computed_at DESC NULLS LAST).
+        # Because rows are ordered latest-first, the first occurrence per job_id
+        # is always the most-recent — no further timestamp comparison needed.
         latest_match: dict[uuid.UUID, Match] = {}
         for m in all_matches:
-            existing = latest_match.get(m.job_id)
-            m_ts: datetime | None = m.computed_at  # type: ignore[assignment]
-            ex_ts: datetime | None = existing.computed_at if existing is not None else None  # type: ignore[assignment]
-            if existing is None or (
-                m_ts is not None and (ex_ts is None or m_ts > ex_ts)
-            ):
+            if m.job_id not in latest_match:
                 latest_match[m.job_id] = m
 
         return [(job, latest_match.get(job.id)) for job in jobs]

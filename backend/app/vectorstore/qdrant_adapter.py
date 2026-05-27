@@ -78,3 +78,52 @@ class QdrantVectorStore:
             )
             for r in results.points
         ]
+
+    # Maximum number of points fetched per scroll call when retrieving all
+    # vectors matching a filter. Large enough to cover typical user corpora in
+    # one round-trip without unbounded memory use.
+    _SCROLL_LIMIT = 1000
+
+    async def get_vectors_by_payload(
+        self,
+        collection: str,
+        payload_filter: dict,
+    ) -> list[list[float]]:
+        """Return all stored vectors whose payload matches the filter, unranked.
+
+        Uses scroll (with_vectors=True) and paginates until exhausted.
+        """
+        conditions: list[qmodels.FieldCondition] = [
+            qmodels.FieldCondition(key=k, match=qmodels.MatchValue(value=v))
+            for k, v in payload_filter.items()
+        ]
+        qdrant_filter = qmodels.Filter(must=conditions)  # type: ignore[arg-type]
+
+        vectors: list[list[float]] = []
+        offset = None
+        while True:
+            scroll_result, next_offset = await self._client.scroll(
+                collection_name=collection,
+                scroll_filter=qdrant_filter,
+                with_vectors=True,
+                limit=self._SCROLL_LIMIT,
+                offset=offset,
+            )
+            for point in scroll_result:
+                raw = point.vector
+                if raw is not None and isinstance(raw, list) and raw and isinstance(raw[0], float):
+                    vectors.append(raw)  # type: ignore[arg-type]
+            if next_offset is None:
+                break
+            offset = next_offset
+        return vectors
+
+    async def aclose(self) -> None:
+        """Close the underlying Qdrant async client."""
+        await self._client.close()
+
+    async def __aenter__(self) -> QdrantVectorStore:
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        await self.aclose()

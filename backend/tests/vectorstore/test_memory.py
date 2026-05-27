@@ -90,3 +90,46 @@ class TestInMemoryVectorStore:
         await store.upsert("col", [_point("a", [1.0, 0.0, 0.0, 0.0])])
         results = await store.search("col", [1.0, 0.0, 0.0, 0.0], top_k=1)
         assert len(results) == 1
+
+    async def test_get_vectors_by_payload_returns_matching_vectors(self) -> None:
+        # Arrange
+        store = InMemoryVectorStore()
+        await store.ensure_collection("col", dim=2)
+        await store.upsert(
+            "col",
+            [
+                _point("u1a", [1.0, 0.0], {"user_id": "u1"}),
+                _point("u1b", [0.5, 0.5], {"user_id": "u1"}),
+                _point("u2a", [0.0, 1.0], {"user_id": "u2"}),
+            ],
+        )
+
+        # Act — fetch vectors for u1 only
+        vectors = await store.get_vectors_by_payload("col", {"user_id": "u1"})
+
+        # Assert — exactly 2 vectors returned, both belonging to u1
+        assert len(vectors) == 2
+        assert [1.0, 0.0] in vectors
+        assert [0.5, 0.5] in vectors
+
+    async def test_get_vectors_by_payload_empty_when_no_match(self) -> None:
+        # Arrange
+        store = InMemoryVectorStore()
+        await store.ensure_collection("col", dim=2)
+        await store.upsert("col", [_point("a", [1.0, 0.0], {"user_id": "u1"})])
+
+        # Act — filter for a user with no points
+        vectors = await store.get_vectors_by_payload("col", {"user_id": "nobody"})
+
+        # Assert
+        assert vectors == []
+
+    async def test_get_vectors_by_payload_empty_collection(self) -> None:
+        # Arrange — collection doesn't even exist yet
+        store = InMemoryVectorStore()
+
+        # Act
+        vectors = await store.get_vectors_by_payload("nonexistent", {"user_id": "u1"})
+
+        # Assert — returns empty list, no error
+        assert vectors == []

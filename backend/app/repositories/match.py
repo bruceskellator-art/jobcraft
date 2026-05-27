@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.match import Match
@@ -51,11 +51,16 @@ class MatchRepository:
         """
         existing = await self.get(user_id, job_id, prompt_version_id)
         if existing is not None:
-            existing.overall_score = overall_score
-            existing.dimension_scores = dimension_scores
-            existing.gaps = gaps
-            existing.rationale = rationale
-            self._session.add(existing)
+            await self._session.execute(
+                update(Match)
+                .where(Match.id == existing.id)
+                .values(
+                    overall_score=overall_score,
+                    dimension_scores=dimension_scores,
+                    gaps=gaps,
+                    rationale=rationale,
+                )
+            )
             await self._session.flush()
             await self._session.refresh(existing)
             return existing

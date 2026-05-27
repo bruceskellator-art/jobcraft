@@ -62,12 +62,12 @@ async def _ensure_prompt(session: AsyncSession) -> PromptVersion:
         temperature=_PROMPT_TEMPERATURE,
         is_active=True,
     )
-    session.add(prompt)
     try:
-        await session.flush()
-        await session.refresh(prompt)
+        async with session.begin_nested():
+            session.add(prompt)
+            await session.flush()
+            await session.refresh(prompt)
     except IntegrityError:
-        await session.rollback()
         result = await session.execute(
             select(PromptVersion).where(
                 PromptVersion.name == _PROMPT_NAME,

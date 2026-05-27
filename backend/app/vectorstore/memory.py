@@ -61,3 +61,16 @@ class InMemoryVectorStore:
             ScoredPoint(id=p.id, score=s, payload=p.payload)
             for s, p in candidates[:top_k]
         ]
+
+    async def get_vectors_by_payload(
+        self,
+        collection: str,
+        payload_filter: dict,
+    ) -> list[list[float]]:
+        """Return all stored vectors whose payload matches the filter, unranked."""
+        store = self._collections.get(collection, {})
+        return [
+            vp.vector
+            for vp in store.values()
+            if _matches_filter(vp.payload, payload_filter)
+        ]
