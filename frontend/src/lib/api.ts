@@ -93,3 +93,24 @@ export async function getJob(id: string, signal?: AbortSignal): Promise<JobPosti
   const res = await fetch(`${BASE}/api/jobs/${id}`, { signal })
   return handleResponse<JobPosting>(res)
 }
+
+import type { MatchRead } from '@/types/match'
+
+export async function getJobMatch(id: string, signal?: AbortSignal): Promise<MatchRead> {
+  const res = await fetch(`${BASE}/api/jobs/${id}/match`, { signal })
+  return handleResponse<MatchRead>(res)
+}
+
+export interface RunMatchesResult {
+  matched: number
+}
+
+export async function runMatches(limit?: number, signal?: AbortSignal): Promise<RunMatchesResult> {
+  const res = await fetch(`${BASE}/api/match/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...(limit !== undefined ? { limit } : {}) }),
+    signal,
+  })
+  return handleResponse<RunMatchesResult>(res)
+}

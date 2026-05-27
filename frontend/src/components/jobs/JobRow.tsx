@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { JobPosting } from '@/types/job'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
 import { relativeTime } from '@/lib/relativeTime'
@@ -40,6 +41,12 @@ function sourceLabel(source: string): string {
   return MAP[source.toLowerCase()] ?? source.slice(0, 3).toUpperCase()
 }
 
+function fitChipClass(score: number): string {
+  if (score >= 0.75) return 'chip-high'
+  if (score >= 0.5) return 'chip-mid'
+  return 'chip-low'
+}
+
 interface JobRowProps {
   job: JobPosting
 }
@@ -60,19 +67,24 @@ export function JobRow({ job }: JobRowProps) {
 
   return (
     <tr className="data-row">
-      {/* Fit — unscored placeholder until Phase 3 */}
+      {/* Fit chip */}
       <td className="px-4 py-3">
-        <span
-          className="chip"
-          style={{
-            background: '#f4f4f5',
-            color: '#71717a',
-            borderColor: '#e4e4e7',
-          }}
-          title="Fit score not yet computed"
-        >
-          —
-        </span>
+        {job.match ? (
+          <span
+            className={`chip ${fitChipClass(job.match.overall_score)}`}
+            title={`Overall fit: ${Math.round(job.match.overall_score * 100)}%`}
+          >
+            {Math.round(job.match.overall_score * 100)}%
+          </span>
+        ) : (
+          <span
+            className="chip"
+            style={{ background: '#f4f4f5', color: '#71717a', borderColor: '#e4e4e7' }}
+            title="Fit score not yet computed"
+          >
+            —
+          </span>
+        )}
       </td>
 
       {/* Role + Skills */}
@@ -131,14 +143,9 @@ export function JobRow({ job }: JobRowProps) {
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-1.5">
           <span className="source-pill">{sourceLabel(job.source)}</span>
-          <a
-            href={job.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-ghost text-xs"
-          >
+          <Link href={`/jobs/${job.id}`} className="btn btn-ghost text-xs">
             View →
-          </a>
+          </Link>
         </div>
       </td>
     </tr>

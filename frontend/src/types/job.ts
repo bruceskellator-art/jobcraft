@@ -1,3 +1,5 @@
+import type { MatchRead } from '@/types/match'
+
 export interface ExtractedJobView {
   company: string
   title: string
@@ -22,6 +24,7 @@ export interface JobPosting {
   remote_policy?: string
   scraped_at: string
   extracted: ExtractedJobView | null
+  match: MatchRead | null
 }
 
 export type JobSource = 'greenhouse' | 'lever' | 'all'

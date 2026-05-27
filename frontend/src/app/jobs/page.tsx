@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useReducer, useCallback } from 'react'
+import { useState, useEffect, useReducer, useCallback, useRef } from 'react'
+import { toast } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
 import type { JobPosting, JobSource } from '@/types/job'
-import { listJobs } from '@/lib/api'
+import { listJobs, runMatches } from '@/lib/api'
 import { JobRow } from '@/components/jobs/JobRow'
 import { JobsToolbar } from '@/components/jobs/JobsToolbar'
 
@@ -36,6 +38,8 @@ export default function JobsPage() {
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [activeSource, setActiveSource] = useState<JobSource>('all')
+  const [isRunningMatches, setIsRunningMatches] = useState(false)
+  const runMatchesAbortRef = useRef<AbortController | null>(null)
 
   // Debounce the search input
   useEffect(() => {
@@ -82,12 +86,34 @@ export default function JobsPage() {
     fetchJobs(debouncedSearch, activeSource, controller.signal)
   }
 
+  async function handleRunMatches() {
+    if (isRunningMatches) return
+    runMatchesAbortRef.current?.abort()
+    const controller = new AbortController()
+    runMatchesAbortRef.current = controller
+    setIsRunningMatches(true)
+    try {
+      const result = await runMatches(undefined, controller.signal)
+      toast.success(`Scored ${result.matched} job${result.matched !== 1 ? 's' : ''}.`)
+      // Refetch to get updated match scores
+      const refetchController = new AbortController()
+      dispatch({ type: 'fetch_start' })
+      fetchJobs(debouncedSearch, activeSource, refetchController.signal)
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
+      toast.error(err instanceof Error ? err.message : 'Failed to run matches.')
+    } finally {
+      setIsRunningMatches(false)
+    }
+  }
+
   const isLoading = fetchState.status === 'loading' || fetchState.status === 'idle'
   const loadError = fetchState.status === 'error' ? fetchState.message : null
   const jobs = fetchState.status === 'success' ? fetchState.jobs : []
 
   return (
     <>
+      <Toaster />
       <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
         <div>
           <h1 className="text-sm font-semibold">Jobs</h1>
@@ -96,9 +122,16 @@ export default function JobsPage() {
               ? 'Loading…'
               : loadError
                 ? 'Error loading jobs'
-                : `${jobs.length} job${jobs.length !== 1 ? 's' : ''} · fit scoring coming in Phase 3`}
+                : `${jobs.length} job${jobs.length !== 1 ? 's' : ''}`}
           </p>
         </div>
+        <button
+          className="btn btn-ghost"
+          onClick={() => void handleRunMatches()}
+          disabled={isRunningMatches}
+        >
+          {isRunningMatches ? 'Scoring…' : 'Run matches'}
+        </button>
       </header>
 
       <JobsToolbar
@@ -155,7 +188,7 @@ export default function JobsPage() {
 
         {!isLoading && !loadError && jobs.length > 0 && (
           <p className="text-xs text-zinc-400 mt-3">
-            Showing {jobs.length} job{jobs.length !== 1 ? 's' : ''} · fit scoring available in Phase 3
+            Showing {jobs.length} job{jobs.length !== 1 ? 's' : ''}
           </p>
         )}
       </div>
