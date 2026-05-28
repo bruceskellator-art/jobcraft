@@ -112,7 +112,7 @@ class QdrantVectorStore:
             for point in scroll_result:
                 raw = point.vector
                 if raw is not None and isinstance(raw, list) and raw and isinstance(raw[0], float):
-                    vectors.append(raw)  # type: ignore[arg-type]
+                    vectors.append(raw)
             if next_offset is None:
                 break
             offset = next_offset

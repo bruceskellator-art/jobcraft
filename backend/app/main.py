@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.experience import router as experience_router
+from app.api.generation import router as generation_router
 from app.api.jobs import router as jobs_router
 from app.api.match import router as match_router
 from app.api.resume_import import router as resume_import_router
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
     )
 
     application.include_router(experience_router)
+    application.include_router(generation_router)
     application.include_router(jobs_router)
     application.include_router(match_router)
     application.include_router(resume_import_router)

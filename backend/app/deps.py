@@ -11,6 +11,7 @@ from app.db.base import get_session
 from app.db.models.user import User
 from app.embeddings.base import EmbeddingClient
 from app.embeddings.openai_adapter import OpenAIEmbeddingAdapter
+from app.generator.pdf import NullPdfRenderer, PdfRenderer
 from app.llm.adapters.anthropic import AnthropicAdapter
 from app.llm.client import LLMClient
 from app.scrapers.base import JobSource
@@ -80,6 +81,18 @@ def get_vector_store() -> VectorStore:
         app.dependency_overrides[get_vector_store] = lambda: InMemoryVectorStore()
     """
     return QdrantVectorStore(url=get_settings().qdrant_url)
+
+
+def get_pdf_renderer() -> PdfRenderer:
+    """Return a NullPdfRenderer by default.
+
+    Swap to TypstRenderer when the ``typst`` binary is available:
+
+        app.dependency_overrides[get_pdf_renderer] = lambda: TypstRenderer()
+
+    Tests always use NullPdfRenderer to avoid the typst binary dependency.
+    """
+    return NullPdfRenderer()
 
 
 def get_source_factory() -> Callable[[list[str], list[str]], list[JobSource]]:
