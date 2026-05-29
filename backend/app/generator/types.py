@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, PlainSerializer
+from pydantic import BaseModel, Field, PlainSerializer, model_validator
 
 # UUID serialized as string so model_dump() produces JSON-safe dicts (SQLite/JSONB).
 _UUIDStr = Annotated[
@@ -36,8 +36,25 @@ class Claim(BaseModel):
 
 class GroundednessResult(BaseModel):
     claims: list[Claim]
-    grounded_ratio: float
+    grounded_ratio: float = Field(ge=0.0, le=1.0)
     ungrounded: list[str]
+
+    @model_validator(mode="after")
+    def _recompute_from_claims(self) -> GroundednessResult:
+        """Recompute grounded_ratio and ungrounded from claims.
+
+        Never trust the LLM's verbatim values — derive them from the
+        structured claim objects so they are always internally consistent.
+        Empty claims list → grounded_ratio = 0.0 (not 1.0).
+        """
+        if not self.claims:
+            self.grounded_ratio = 0.0
+            self.ungrounded = []
+            return self
+        grounded_count = sum(1 for c in self.claims if c.grounded)
+        self.grounded_ratio = grounded_count / len(self.claims)
+        self.ungrounded = [c.text for c in self.claims if not c.grounded]
+        return self
 
 
 class GeneratedDoc(BaseModel):

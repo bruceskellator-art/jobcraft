@@ -286,7 +286,27 @@ async def _retrieve_relevant_experience(
         select(ExperienceItem).where(ExperienceItem.id.in_(ids_in_rank))
     )
     by_id = {item.id: item for item in result.scalars().all()}
-    return [by_id[i] for i in ids_in_rank if i in by_id]
+    retrieved = [by_id[i] for i in ids_in_rank if i in by_id]
+
+    # If every vector ID was stale (deleted items), but the user still has
+    # experience items in the DB, fall back to a full scan so generation
+    # never silently runs with zero context.
+    if not retrieved:
+        result = await session.execute(
+            select(ExperienceItem).where(ExperienceItem.user_id == user_id)
+        )
+        all_items = list(result.scalars().all())
+        if all_items:
+            logger.warning(
+                "_retrieve_relevant_experience: all %d vector ID(s) were stale "
+                "for user %s; falling back to full scan (%d items)",
+                len(ids_in_rank),
+                user_id,
+                len(all_items),
+            )
+            return all_items
+
+    return retrieved
 
 
 # ---------------------------------------------------------------------------
@@ -315,12 +335,20 @@ async def generate_resume(
     user_id: uuid.UUID,
     job: JobPosting,
     style: StyleConfig,
-) -> str:
+    *,
+    items: list[ExperienceItem] | None = None,
+) -> tuple[str, list[ExperienceItem]]:
     """Generate a grounded Markdown resume tailored to a job posting.
 
-    Returns raw Markdown; does NOT persist to the database.
+    Returns (markdown, experience_items_used).  The caller can reuse the
+    returned items list for groundedness checking so the same subset is used
+    for both generation and verification.
+
+    If ``items`` is provided the RAG retrieval step is skipped; otherwise
+    items are retrieved automatically.
     """
-    items = await _retrieve_relevant_experience(session, embed, store, user_id, job)
+    if items is None:
+        items = await _retrieve_relevant_experience(session, embed, store, user_id, job)
     prompt = await ensure_resume_prompt(session)
 
     response = await llm.complete(
@@ -336,7 +364,7 @@ async def generate_resume(
     )
     if response.parsed is None:
         raise RuntimeError("generate_resume: LLM returned no parsed result")
-    return response.parsed.markdown
+    return response.parsed.markdown, items
 
 
 async def generate_cover_letter(
@@ -347,12 +375,20 @@ async def generate_cover_letter(
     user_id: uuid.UUID,
     job: JobPosting,
     style: StyleConfig,
-) -> str:
+    *,
+    items: list[ExperienceItem] | None = None,
+) -> tuple[str, list[ExperienceItem]]:
     """Generate a grounded Markdown cover letter tailored to a job posting.
 
-    Returns raw Markdown; does NOT persist to the database.
+    Returns (markdown, experience_items_used).  The caller can reuse the
+    returned items list for groundedness checking so the same subset is used
+    for both generation and verification.
+
+    If ``items`` is provided the RAG retrieval step is skipped; otherwise
+    items are retrieved automatically.
     """
-    items = await _retrieve_relevant_experience(session, embed, store, user_id, job)
+    if items is None:
+        items = await _retrieve_relevant_experience(session, embed, store, user_id, job)
     prompt = await ensure_cover_letter_prompt(session)
 
     extracted = job.extracted or {}
@@ -372,7 +408,7 @@ async def generate_cover_letter(
     )
     if response.parsed is None:
         raise RuntimeError("generate_cover_letter: LLM returned no parsed result")
-    return response.parsed.markdown
+    return response.parsed.markdown, items
 
 
 # ---------------------------------------------------------------------------
@@ -424,12 +460,16 @@ async def score_artifact(
     job: JobPosting,
     groundedness: GroundednessResult,
     match: Match | None,
+    length: str = "one_page",
 ) -> ArtifactScores:
     """Compose ArtifactScores from deterministic heuristics + LLM groundedness.
+
+    ``length`` should match the StyleConfig used for generation so that
+    score_clarity uses the correct word-count target.
 
     Imports scoring helpers from app.generator.scoring to keep this file
     under 300 lines and allow independent unit testing of the pure functions.
     """
     from app.generator.scoring import compose_artifact_scores
 
-    return compose_artifact_scores(markdown, job, groundedness, match)
+    return compose_artifact_scores(markdown, job, groundedness, match, length)

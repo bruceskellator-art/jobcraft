@@ -140,6 +140,43 @@ class TestRetrieveRelevantExperience:
 
         assert len(retrieved) <= 2
 
+    async def test_stale_vector_ids_fallback_to_full_scan(self, session) -> None:
+        """If the vector store returns IDs that no longer exist in the DB,
+        fall back to a full scan rather than returning an empty list."""
+        user, items = await _seed_user(session, n=2)
+        job = _make_job()
+        embed = FakeEmbeddingAdapter(dim=64)
+        store = InMemoryVectorStore()
+
+        # Index the items so the store has their IDs, then delete them from
+        # the DB to simulate stale vectors pointing at deleted rows.
+        await index_user_experience(session, embed, store, user.id)
+        for item in items:
+            await session.delete(item)
+        await session.flush()
+
+        # Re-seed fresh items that are NOT in the vector store.
+        fresh_items = [
+            ExperienceItem(
+                id=uuid.uuid4(),
+                user_id=user.id,
+                kind="work",
+                title="Fresh role",
+                content="Fresh content not indexed in the vector store.",
+            )
+        ]
+        for fi in fresh_items:
+            session.add(fi)
+        await session.flush()
+
+        retrieved = await _retrieve_relevant_experience(
+            session, embed, store, user.id, job, top_n=10
+        )
+
+        # The stale IDs map to nothing in DB, so fallback returns fresh items.
+        assert len(retrieved) == len(fresh_items)
+        assert retrieved[0].id == fresh_items[0].id
+
     async def test_most_relevant_items_ranked_first(self, session) -> None:
         """Items sharing tokens with the JD should rank higher."""
         user = User(id=uuid.uuid4(), email=f"{uuid.uuid4()}@test.com", name="Test")
@@ -198,7 +235,7 @@ class TestGenerateResume:
         adapter = MockAdapter(responses=[_RESUME_DOC_JSON])
         llm = LLMClient(session=session, adapter=adapter)
 
-        md = await generate_resume(session, llm, embed, store, user.id, job, StyleConfig())
+        md, _ = await generate_resume(session, llm, embed, store, user.id, job, StyleConfig())
 
         assert isinstance(md, str)
         assert len(md) > 0
@@ -213,7 +250,7 @@ class TestGenerateResume:
         adapter = MockAdapter(responses=[_RESUME_DOC_JSON])
         llm = LLMClient(session=session, adapter=adapter)
 
-        md = await generate_resume(session, llm, embed, store, user.id, job, StyleConfig())
+        md, _ = await generate_resume(session, llm, embed, store, user.id, job, StyleConfig())
 
         assert md == _RESUME_MD
 

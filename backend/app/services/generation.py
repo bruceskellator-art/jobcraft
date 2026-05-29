@@ -23,9 +23,8 @@ from app.embeddings.base import EmbeddingClient
 from app.generator.pdf import NullPdfRenderer, PdfRenderer
 from app.generator.scoring import score_clarity, score_quantified_impact
 from app.generator.service import (
+    _retrieve_relevant_experience,
     check_groundedness,
-    ensure_cover_letter_prompt,
-    ensure_resume_prompt,
     generate_cover_letter,
     generate_resume,
     score_artifact,
@@ -70,21 +69,33 @@ async def generate_for_job(
 
     renderer = pdf if pdf is not None else NullPdfRenderer()
 
-    # 1. Generate markdown
+    # 1. Retrieve the relevant experience subset ONCE — reused for both
+    #    generation and groundedness so the judge only sees items the
+    #    generator actually had access to.
+    retrieved_items = await _retrieve_relevant_experience(
+        session, embed, store, user_id, job
+    )
+
+    # 2. Generate markdown (pass pre-retrieved items; no second RAG call)
     if kind == "resume":
-        markdown = await generate_resume(session, llm, embed, store, user_id, job, style)
+        markdown, used_items = await generate_resume(
+            session, llm, embed, store, user_id, job, style, items=retrieved_items
+        )
+        from app.generator.service import ensure_resume_prompt
+
+        prompt_version = await ensure_resume_prompt(session)
     else:
-        markdown = await generate_cover_letter(session, llm, embed, store, user_id, job, style)
+        markdown, used_items = await generate_cover_letter(
+            session, llm, embed, store, user_id, job, style, items=retrieved_items
+        )
+        from app.generator.service import ensure_cover_letter_prompt
+
+        prompt_version = await ensure_cover_letter_prompt(session)
 
     logger.debug("generate_for_job: generated %s (%d chars)", kind, len(markdown))
 
-    # 2. Groundedness check — surface ungrounded claims, do not drop them
-    result = await session.execute(
-        select(ExperienceItem).where(ExperienceItem.user_id == user_id)
-    )
-    experience_items = list(result.scalars().all())
-
-    groundedness = await check_groundedness(session, llm, markdown, experience_items)
+    # 3. Groundedness check against the SAME subset used for generation
+    groundedness = await check_groundedness(session, llm, markdown, used_items)
     if groundedness.ungrounded:
         logger.warning(
             "generate_for_job: %d ungrounded claim(s) in generated %s for job %s",
@@ -93,19 +104,15 @@ async def generate_for_job(
             job.id,
         )
 
-    # 3. Score
-    scores = await score_artifact(session, llm, markdown, job, groundedness, match)
-
-    # 4. Optional PDF render (best-effort)
-    _ = renderer.render(markdown)
-
-    # 5. Persist artifact
-    prompt_version = (
-        await ensure_resume_prompt(session)
-        if kind == "resume"
-        else await ensure_cover_letter_prompt(session)
+    # 4. Score — thread style.length so clarity uses the right word target
+    scores = await score_artifact(
+        session, llm, markdown, job, groundedness, match, style.length
     )
 
+    # 5. Optional PDF render (best-effort)
+    _ = renderer.render(markdown)
+
+    # 6. Persist artifact — prompt_version already fetched above (no second DB round-trip)
     repo = ArtifactRepository(session)
     artifact = await repo.create(
         user_id=user_id,
@@ -133,12 +140,22 @@ async def score_baseline(
     """Score an uploaded baseline résumé with no job context.
 
     fit and ats_keywords are 0.0 (no job to compare against).
-    groundedness, quantified_impact, and clarity use deterministic heuristics
-    only — no LLM call needed.
+    groundedness is measured by running check_groundedness against ALL of
+    the user's experience items (makes an LLM call).
+    quantified_impact and clarity use deterministic heuristics.
     """
+    result = await session.execute(
+        select(ExperienceItem).where(ExperienceItem.user_id == user_id)
+    )
+    experience_items = list(result.scalars().all())
+
+    groundedness = await check_groundedness(
+        session, llm, baseline_markdown, experience_items
+    )
+
     return ArtifactScores(
         fit=0.0,
-        groundedness=0.0,
+        groundedness=groundedness.grounded_ratio,
         ats_keywords=0.0,
         quantified_impact=score_quantified_impact(baseline_markdown),
         clarity=score_clarity(baseline_markdown),

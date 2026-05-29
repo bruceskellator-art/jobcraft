@@ -61,6 +61,40 @@ _GROUNDEDNESS_JSON = json.dumps(
     }
 )
 
+# Canned groundedness result with no claims (for baseline with no experience items)
+_GROUNDEDNESS_EMPTY_JSON = json.dumps(
+    {
+        "claims": [],
+        "grounded_ratio": 0.0,
+        "ungrounded": [],
+    }
+)
+
+# Canned groundedness result for baseline with 2 quantified bullets
+_GROUNDEDNESS_TWO_THIRDS_JSON = json.dumps(
+    {
+        "claims": [
+            {
+                "text": "Reduced latency by 40%.",
+                "experience_id": str(uuid.uuid4()),
+                "grounded": True,
+            },
+            {
+                "text": "Improved throughput by 3x.",
+                "experience_id": str(uuid.uuid4()),
+                "grounded": True,
+            },
+            {
+                "text": "Led a team.",
+                "experience_id": None,
+                "grounded": False,
+            },
+        ],
+        "grounded_ratio": 0.667,
+        "ungrounded": ["Led a team."],
+    }
+)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -235,7 +269,9 @@ class TestGenerateForJobCoverLetter:
 
 class TestScoreBaseline:
     async def test_returns_artifact_scores(self, session) -> None:
-        adapter = MockAdapter(responses=[])
+        # score_baseline now calls check_groundedness (1 LLM call).
+        # User has no experience items so empty claims → grounded_ratio=0.0.
+        adapter = MockAdapter(responses=[_GROUNDEDNESS_EMPTY_JSON])
         llm = LLMClient(session=session, adapter=adapter)
         user_id = uuid.uuid4()
 
@@ -251,10 +287,12 @@ class TestScoreBaseline:
         assert isinstance(scores, ArtifactScores)
         assert scores.fit == pytest.approx(0.0)
         assert scores.ats_keywords == pytest.approx(0.0)
+        # grounded_ratio recomputed from empty claims → 0.0
         assert scores.groundedness == pytest.approx(0.0)
 
     async def test_quantified_impact_detected(self, session) -> None:
-        adapter = MockAdapter(responses=[])
+        # score_baseline now calls check_groundedness (1 LLM call).
+        adapter = MockAdapter(responses=[_GROUNDEDNESS_TWO_THIRDS_JSON])
         llm = LLMClient(session=session, adapter=adapter)
         user_id = uuid.uuid4()
 
@@ -266,7 +304,7 @@ class TestScoreBaseline:
         assert scores.quantified_impact == pytest.approx(2 / 3)
 
     async def test_clarity_within_range(self, session) -> None:
-        adapter = MockAdapter(responses=[])
+        adapter = MockAdapter(responses=[_GROUNDEDNESS_EMPTY_JSON])
         llm = LLMClient(session=session, adapter=adapter)
         user_id = uuid.uuid4()
 
@@ -274,3 +312,41 @@ class TestScoreBaseline:
         scores = await score_baseline(session, llm, user_id, short_md)
 
         assert 0.0 <= scores.clarity <= 1.0
+
+    async def test_groundedness_measured_via_llm(self, session) -> None:
+        """score_baseline now measures groundedness with check_groundedness."""
+        # Seed a user and experience items so groundedness can be meaningful.
+        user = User(id=uuid.uuid4(), email=f"{uuid.uuid4()}@test.com", name="Test")
+        session.add(user)
+        item = ExperienceItem(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            kind="work",
+            title="Engineer",
+            content="Reduced latency by 40% at Acme Corp.",
+        )
+        session.add(item)
+        await session.flush()
+
+        # MockAdapter returns a fully-grounded result
+        grounded_json = json.dumps(
+            {
+                "claims": [
+                    {
+                        "text": "Reduced latency by 40%.",
+                        "experience_id": str(item.id),
+                        "grounded": True,
+                    }
+                ],
+                "grounded_ratio": 1.0,
+                "ungrounded": [],
+            }
+        )
+        adapter = MockAdapter(responses=[grounded_json])
+        llm = LLMClient(session=session, adapter=adapter)
+
+        scores = await score_baseline(
+            session, llm, user.id, "- Reduced latency by 40%."
+        )
+
+        assert scores.groundedness == pytest.approx(1.0)

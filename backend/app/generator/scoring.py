@@ -13,17 +13,30 @@ from app.db.models.job_posting import JobPosting
 from app.db.models.match import Match
 from app.generator.types import ArtifactScores, GroundednessResult
 
-# Matches lines that look like resume bullets (starting with -, *, or a digit+dot)
-_BULLET_RE = re.compile(r"^\s*[-*]|\s*\d+\.\s")
-# Matches a digit or percentage somewhere in the line
-_QUANTIFIED_RE = re.compile(r"\d|%")
+# Matches lines that look like resume bullets.
+# Anchored so "version 2.0" mid-line is not treated as a bullet.
+_BULLET_RE = re.compile(r"^\s*(?:[-*]|\d+\.)\s")
+# Matches a genuine quantity signal: percentage, currency prefix, multiplier,
+# or a multi-digit number that is NOT a bare 4-digit year.
+# Bare years (e.g. "2018") and plain ordinals/phase numbers ("Phase 1") are
+# intentionally excluded by requiring at least one of these specific forms.
+_QUANTIFIED_RE = re.compile(
+    r"(?:"
+    r"\d+%"  # percentage: "40%"
+    r"|[$£€]\d"  # currency: "$200k", "£50"
+    r"|\d+x\b"  # multiplier: "3x"
+    r"|(?<!\d)\d{2,3}(?!\d)"  # 2–3 digit number (not part of a 4-digit year)
+    r")"
+)
 
 
 def score_ats_keywords(markdown: str, job: JobPosting) -> float:
     """Coverage of required_skills from the JD that appear in the markdown.
 
-    Case-insensitive substring match. Returns 0.0 if the job has no
-    required_skills extracted.
+    Uses whole-word boundary matching (not raw substring) to avoid false
+    positives (e.g. skill "Go" should not match "category-level workflows").
+    Skills shorter than 2 characters are skipped.
+    Returns 0.0 if the job has no required_skills extracted.
     """
     if job.extracted is None:
         return 0.0
@@ -31,8 +44,15 @@ def score_ats_keywords(markdown: str, job: JobPosting) -> float:
     if not required:
         return 0.0
     lower_md = markdown.lower()
-    matched = sum(1 for skill in required if skill.lower() in lower_md)
-    return matched / len(required)
+    scorable = [skill for skill in required if len(skill) >= 2]
+    if not scorable:
+        return 0.0
+    matched = sum(
+        1
+        for skill in scorable
+        if re.search(r"\b" + re.escape(skill.lower()) + r"\b", lower_md)
+    )
+    return matched / len(scorable)
 
 
 def score_quantified_impact(markdown: str) -> float:
