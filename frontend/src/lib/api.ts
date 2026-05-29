@@ -114,3 +114,52 @@ export async function runMatches(limit?: number, signal?: AbortSignal): Promise<
   })
   return handleResponse<RunMatchesResult>(res)
 }
+
+// --- Artifacts ---
+
+import type { Artifact, StyleConfig, ArtifactKind } from '@/types/artifact'
+
+export interface GenerateArtifactPayload {
+  kind: ArtifactKind
+  style: StyleConfig
+}
+
+export async function generateArtifact(
+  jobId: string,
+  payload: GenerateArtifactPayload,
+  signal?: AbortSignal,
+): Promise<Artifact> {
+  const res = await fetch(`${BASE}/api/jobs/${jobId}/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  return handleResponse<Artifact>(res)
+}
+
+export async function listJobArtifacts(jobId: string, signal?: AbortSignal): Promise<Artifact[]> {
+  const res = await fetch(`${BASE}/api/jobs/${jobId}/artifacts`, { signal })
+  return handleResponse<Artifact[]>(res)
+}
+
+export async function listArtifacts(signal?: AbortSignal): Promise<Artifact[]> {
+  const res = await fetch(`${BASE}/api/artifacts`, { signal })
+  return handleResponse<Artifact[]>(res)
+}
+
+export async function getArtifact(id: string, signal?: AbortSignal): Promise<Artifact> {
+  const res = await fetch(`${BASE}/api/artifacts/${id}`, { signal })
+  return handleResponse<Artifact>(res)
+}
+
+export async function uploadBaseline(file: File, signal?: AbortSignal): Promise<Artifact> {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(`${BASE}/api/artifacts/baseline`, {
+    method: 'POST',
+    body: form,
+    signal,
+  })
+  return handleResponse<Artifact>(res)
+}

@@ -8,6 +8,7 @@ import type { JobPosting } from '@/types/job'
 import type { MatchRead } from '@/types/match'
 import { getJob, getJobMatch } from '@/lib/api'
 import { MatchBreakdown } from '@/components/jobs/MatchBreakdown'
+import { GenerationPanel } from '@/components/jobs/GenerationPanel'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
 
 type PageState =
@@ -273,15 +274,8 @@ export default function JobDetailPage() {
           </section>
         )}
 
-        {/* Phase 4 placeholder */}
-        <section className="bg-zinc-50 border border-dashed border-zinc-300 rounded-xl px-4 py-6 text-center">
-          <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">
-            Phase 4 — coming soon
-          </p>
-          <p className="text-sm text-zinc-500">
-            Résumé &amp; cover letter generation will appear here once Phase 4 is implemented.
-          </p>
-        </section>
+        {/* Generation panel */}
+        <GenerationPanel jobId={id} />
 
       </div>
     </>
