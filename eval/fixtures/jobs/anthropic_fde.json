@@ -1,0 +1,24 @@
+{
+  "source": "eval",
+  "source_url": "https://www.anthropic.com/careers/forward-deployed-engineer",
+  "source_id": "anthropic-fde-2026",
+  "company": "Anthropic",
+  "title": "Forward Deployed Engineer",
+  "raw_content": "Anthropic is seeking a Forward Deployed Engineer to work closely with enterprise customers deploying Claude AI. You will build integrations, debug complex AI systems, and write Python code to solve real-world problems. Strong Python skills required. Experience with LLMs, APIs, and customer-facing engineering preferred.",
+  "extracted": {
+    "required_skills": ["Python", "AI", "LLMs", "REST APIs", "debugging"],
+    "nice_to_have_skills": ["TypeScript", "machine learning", "cloud infrastructure"],
+    "responsibilities": [
+      "Build customer-facing integrations with Claude AI",
+      "Debug and resolve complex AI system issues",
+      "Write clean, maintainable Python code",
+      "Collaborate with enterprise customers on deployment"
+    ],
+    "culture_signals": [
+      "Mission-driven: AI safety and beneficial AI",
+      "Fast-paced startup environment",
+      "High autonomy and ownership"
+    ],
+    "summary": "Forward Deployed Engineer role at Anthropic building Claude AI integrations for enterprise customers."
+  }
+}

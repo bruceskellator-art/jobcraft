@@ -1,0 +1,12 @@
+name: extraction_accuracy_v1
+description: Validates that job extraction produces coherent structured output
+cases:
+  - id: extract_001
+    job: fixtures/jobs/anthropic_fde.json
+    assertions:
+      - kind: contains_skill
+        skill: "Python"
+      - kind: excludes_phrase
+        phrase: "undefined"
+      - kind: length
+        min_words: 30

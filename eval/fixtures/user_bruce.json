@@ -1,0 +1,34 @@
+{
+  "name": "Bruce Ong",
+  "email": "bruce@example.com",
+  "experience_items": [
+    {
+      "kind": "work",
+      "title": "Senior Software Engineer",
+      "organization": "Traveloka",
+      "content": "Led development of AI-powered recommendation systems using Python and machine learning. Built data pipelines processing 2M events per day. Mentored a team of 4 engineers. Improved system reliability from 99.5% to 99.9% uptime.",
+      "tags": ["Python", "ML", "AI", "data engineering", "leadership"]
+    },
+    {
+      "kind": "work",
+      "title": "Software Engineer",
+      "organization": "Previous Corp",
+      "content": "Developed RESTful APIs in Python using FastAPI and SQLAlchemy. Implemented SQL query optimization reducing p99 latency by 40%. Collaborated with product and design teams to ship features.",
+      "tags": ["Python", "FastAPI", "SQL", "REST API"]
+    },
+    {
+      "kind": "education",
+      "title": "Bachelor of Computer Science",
+      "organization": "University of Technology",
+      "content": "Graduated with distinction. Relevant coursework: Algorithms, Machine Learning, Distributed Systems.",
+      "tags": ["computer science", "algorithms", "machine learning"]
+    },
+    {
+      "kind": "skill",
+      "title": "Technical Skills",
+      "organization": null,
+      "content": "Python, SQL, TypeScript, React, FastAPI, PostgreSQL, Redis, Docker, Kubernetes, AWS, machine learning, data engineering.",
+      "tags": ["Python", "SQL", "TypeScript", "React", "cloud", "AI"]
+    }
+  ]
+}

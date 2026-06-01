@@ -23,6 +23,7 @@ dependencies = [
     "python-multipart",
     "tenacity",
     "qdrant-client>=1.9",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -33,7 +34,11 @@ dev = [
     "ruff",
     "mypy",
     "aiosqlite",
+    "types-PyYAML",
 ]
+
+[project.scripts]
+jobcraft = "app.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

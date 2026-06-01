@@ -1,0 +1,19 @@
+name: resume_quality_v1
+description: Validates resume generation quality for a typical candidate
+cases:
+  - id: case_001
+    user_corpus: fixtures/user_bruce.json
+    job: fixtures/jobs/anthropic_fde.json
+    assertions:
+      - kind: contains_skill
+        skill: "Python"
+      - kind: length
+        min_words: 50
+        max_words: 800
+      - kind: excludes_phrase
+        phrase: "I cannot"
+      - kind: groundedness
+        threshold: 0.7
+      - kind: llm_judge
+        rubric: "Score the resume 0-1 on clarity, relevance, and professional tone. 1.0 means excellent across all criteria."
+        threshold: 0.6

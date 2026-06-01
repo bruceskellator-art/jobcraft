@@ -1,0 +1,14 @@
+name: match_consistency_v1
+description: Validates match scoring consistency for a standard candidate/job pair
+cases:
+  - id: match_001
+    user_corpus: fixtures/user_bruce.json
+    job: fixtures/jobs/anthropic_fde.json
+    assertions:
+      - kind: contains_skill
+        skill: "AI"
+      - kind: length
+        min_words: 50
+        max_words: 900
+      - kind: excludes_phrase
+        phrase: "hallucinated"
