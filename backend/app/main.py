@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.admin_evals import router as admin_evals_router
 from app.api.experience import router as experience_router
 from app.api.generation import router as generation_router
 from app.api.jobs import router as jobs_router
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    application.include_router(admin_evals_router)
     application.include_router(experience_router)
     application.include_router(generation_router)
     application.include_router(jobs_router)

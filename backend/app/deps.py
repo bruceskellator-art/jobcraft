@@ -4,10 +4,10 @@ from collections.abc import Callable
 
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import get_settings
-from app.db.base import get_session
+from app.db.base import _get_session_factory, get_session
 from app.db.models.user import User
 from app.embeddings.base import EmbeddingClient
 from app.embeddings.openai_adapter import OpenAIEmbeddingAdapter
@@ -81,6 +81,39 @@ def get_vector_store() -> VectorStore:
         app.dependency_overrides[get_vector_store] = lambda: InMemoryVectorStore()
     """
     return QdrantVectorStore(url=get_settings().qdrant_url)
+
+
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Return the application's async session factory.
+
+    In tests, override with an in-memory factory bound to a test engine:
+
+        app.dependency_overrides[get_session_factory] = lambda: make_session_factory(test_engine)
+    """
+    return _get_session_factory()
+
+
+def get_llm_factory() -> Callable[[AsyncSession], LLMClient]:
+    """Return a factory that builds an LLMClient (AnthropicAdapter) for a given session.
+
+    The returned callable accepts an AsyncSession and produces a fresh LLMClient
+    bound to that session.  run_suite calls this once per case, passing the
+    case's own isolated session.
+
+    In tests, override this dependency to inject a MockAdapter-backed factory:
+
+        def _mock_llm_factory():
+            adapter = MockAdapter(fn=my_fn)
+            return lambda session: LLMClient(session=session, adapter=adapter)
+
+        app.dependency_overrides[get_llm_factory] = _mock_llm_factory
+    """
+    _adapter = AnthropicAdapter()
+
+    def _factory(session: AsyncSession) -> LLMClient:
+        return LLMClient(session=session, adapter=_adapter)
+
+    return _factory
 
 
 def get_pdf_renderer() -> PdfRenderer:
