@@ -163,3 +163,40 @@ export async function uploadBaseline(file: File, signal?: AbortSignal): Promise<
   })
   return handleResponse<Artifact>(res)
 }
+
+// --- Evals ---
+
+import type { EvalRun } from '@/types/eval'
+
+export async function listEvalRuns(signal?: AbortSignal): Promise<EvalRun[]> {
+  const res = await fetch(`${BASE}/api/admin/evals`, { signal })
+  return handleResponse<EvalRun[]>(res)
+}
+
+export async function getEvalRun(id: string, signal?: AbortSignal): Promise<EvalRun> {
+  const res = await fetch(`${BASE}/api/admin/evals/${id}`, { signal })
+  return handleResponse<EvalRun>(res)
+}
+
+export interface RunEvalSuitePayload {
+  suite_name: string
+  prompt_version?: string
+}
+
+export async function runEvalSuite(
+  suiteName: string,
+  promptVersion?: string,
+  signal?: AbortSignal,
+): Promise<EvalRun> {
+  const payload: RunEvalSuitePayload = {
+    suite_name: suiteName,
+    ...(promptVersion !== undefined ? { prompt_version: promptVersion } : {}),
+  }
+  const res = await fetch(`${BASE}/api/admin/evals/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  return handleResponse<EvalRun>(res)
+}
