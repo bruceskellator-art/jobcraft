@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 COLLECTION_USER_EXPERIENCE = "user_experience"
 COLLECTION_JOB_POSTINGS = "job_postings"
+COLLECTION_ANSWER_BANK = "answer_bank"
 
 
 def _compose_jd_text(job: JobPosting) -> str:
