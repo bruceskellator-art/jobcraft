@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +28,7 @@ class AutopilotConfig(BaseModel):
     Fields match §4.8 of the JobCraft spec exactly.
     """
 
-    mode: str = "selective"
+    mode: Literal["off", "selective", "full"] = "selective"
     auto_submit_sources: list[str] = Field(
         default_factory=lambda: ["linkedin_easy_apply", "mycareersfuture"]
     )
