@@ -6,6 +6,8 @@ from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.apply.browser import FormSource, PlaywrightFormSource
+from app.apply.strategies import ApplyStrategy, GenericFormStrategy, GreenhouseFormStrategy
 from app.config import get_settings
 from app.db.base import _get_session_factory, get_session
 from app.db.models.user import User
@@ -126,6 +128,30 @@ def get_pdf_renderer() -> PdfRenderer:
     Tests always use NullPdfRenderer to avoid the typst binary dependency.
     """
     return NullPdfRenderer()
+
+
+def get_form_source() -> FormSource:
+    """Return the default FormSource (PlaywrightFormSource stub).
+
+    In tests, override with FakeFormSource to avoid network I/O:
+
+        app.dependency_overrides[get_form_source] = lambda: FakeFormSource(fields=[...])
+    """
+    return PlaywrightFormSource()
+
+
+def get_apply_strategies(
+    form_source: FormSource = Depends(get_form_source),  # noqa: B008
+) -> list[ApplyStrategy]:
+    """Return the ordered list of ApplyStrategy instances.
+
+    Greenhouse-specific strategy is tried first; GenericFormStrategy is the
+    catch-all fallback.  In tests, override get_form_source instead.
+    """
+    return [
+        GreenhouseFormStrategy(form_source),
+        GenericFormStrategy(form_source),
+    ]
 
 
 def get_source_factory() -> Callable[[list[str], list[str]], list[JobSource]]:

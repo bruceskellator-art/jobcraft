@@ -24,6 +24,7 @@ dependencies = [
     "tenacity",
     "qdrant-client>=1.9",
     "pyyaml>=6.0",
+    "arq>=0.25",
 ]
 
 [project.optional-dependencies]
