@@ -1,0 +1,195 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
+import { Toaster } from '@/components/ui/sonner'
+import type { AutopilotConfig, AnswerBankItem, ProfileField } from '@/types/apply'
+import {
+  getAutopilot,
+  putAutopilot,
+  getProfileFields,
+  putProfileField,
+  listAnswers,
+  createAnswer,
+  approveAnswer,
+} from '@/lib/api'
+import { AutopilotForm } from '@/components/settings/AutopilotForm'
+import { AnswerBank } from '@/components/settings/AnswerBank'
+import { ProfileFields } from '@/components/settings/ProfileFields'
+
+const SOURCES = [
+  { name: 'LinkedIn', key: 'linkedin', trusted: true },
+  { name: 'Greenhouse', key: 'greenhouse', trusted: true },
+  { name: 'Lever', key: 'lever', trusted: true },
+  { name: 'MCF', key: 'mcf', trusted: false },
+]
+
+export default function SettingsPage() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [autopilot, setAutopilot] = useState<AutopilotConfig | null>(null)
+  const [profileFields, setProfileFields] = useState<ProfileField[]>([])
+  const [answers, setAnswers] = useState<AnswerBankItem[]>([])
+
+  const [isSavingAutopilot, setIsSavingAutopilot] = useState(false)
+
+  const loadAll = useCallback((signal: AbortSignal) => {
+    Promise.all([
+      getAutopilot(signal),
+      getProfileFields(signal),
+      listAnswers(signal),
+    ])
+      .then(([ap, fields, ans]) => {
+        if (signal.aborted) return
+        setAutopilot(ap)
+        setProfileFields(fields)
+        setAnswers(ans)
+        setIsLoading(false)
+      })
+      .catch((err: unknown) => {
+        if (signal.aborted) return
+        setLoadError(err instanceof Error ? err.message : 'Failed to load settings.')
+        setIsLoading(false)
+      })
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    loadAll(controller.signal)
+    return () => controller.abort()
+  }, [loadAll])
+
+  async function handleSaveAutopilot(config: AutopilotConfig) {
+    if (isSavingAutopilot) return
+    setIsSavingAutopilot(true)
+    try {
+      const updated = await putAutopilot(config)
+      setAutopilot(updated)
+      toast.success('Autopilot settings saved.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save autopilot.')
+      throw err
+    } finally {
+      setIsSavingAutopilot(false)
+    }
+  }
+
+  async function handleApproveAnswer(id: string) {
+    const updated = await approveAnswer(id, true)
+    setAnswers(prev => prev.map(a => a.id === id ? updated : a))
+  }
+
+  async function handleCreateAnswer(question: string, answer: string) {
+    const created = await createAnswer(question, answer)
+    setAnswers(prev => [...prev, created])
+  }
+
+  async function handleSaveField(key: string, value: string, isKnockout: boolean) {
+    const updated = await putProfileField(key, value, isKnockout)
+    setProfileFields(prev =>
+      prev.map(f => f.key === key ? updated : f)
+    )
+  }
+
+  async function handleAddField(key: string, value: string, isKnockout: boolean) {
+    const created = await putProfileField(key, value, isKnockout)
+    setProfileFields(prev => {
+      const exists = prev.some(f => f.key === created.key)
+      if (exists) return prev.map(f => f.key === created.key ? created : f)
+      return [...prev, created]
+    })
+  }
+
+  return (
+    <>
+      <Toaster />
+      <header className="h-14 bg-white border-b border-zinc-200 flex items-center px-6 sticky top-0 z-10">
+        <div>
+          <h1 className="text-sm font-semibold">Settings</h1>
+          <p className="text-xs text-zinc-400">Autopilot, answer bank, and profile fields</p>
+        </div>
+      </header>
+
+      <div className="p-6 max-w-3xl space-y-5">
+        {isLoading && <div className="empty py-16">Loading settings…</div>}
+
+        {!isLoading && loadError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+            {loadError}
+            <button
+              onClick={() => {
+                const controller = new AbortController()
+                loadAll(controller.signal)
+              }}
+              className="ml-2 underline text-red-600 hover:text-red-800"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {!isLoading && !loadError && (
+          <>
+            {/* Sources & Autopilot */}
+            <section className="bg-white border border-zinc-200 rounded-xl p-4 space-y-4">
+              <h2 className="text-sm font-semibold">Sources &amp; Autopilot</h2>
+
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-50/80 text-zinc-500 text-xs border-b border-zinc-100">
+                  <tr className="text-left">
+                    <th className="px-3 py-2 font-medium">Source</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Trusted</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100">
+                  {SOURCES.map(src => (
+                    <tr key={src.key} className="data-row">
+                      <td className="px-3 py-2 font-medium text-zinc-800">{src.name}</td>
+                      <td className="px-3 py-2">
+                        <span className="toggle-on">active</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        {src.trusted
+                          ? <span className="toggle-on">trusted</span>
+                          : <span className="toggle-off">untrusted</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {autopilot && (
+                <AutopilotForm
+                  initial={autopilot}
+                  onSave={handleSaveAutopilot}
+                  isSaving={isSavingAutopilot}
+                />
+              )}
+            </section>
+
+            {/* Answer Bank */}
+            <section className="bg-white border border-zinc-200 rounded-xl p-4">
+              <h2 className="text-sm font-semibold mb-3">Answer Bank</h2>
+              <AnswerBank
+                answers={answers}
+                onApprove={handleApproveAnswer}
+                onCreate={handleCreateAnswer}
+              />
+            </section>
+
+            {/* Profile Fields */}
+            <section className="bg-white border border-zinc-200 rounded-xl p-4">
+              <h2 className="text-sm font-semibold mb-3">Profile Fields</h2>
+              <ProfileFields
+                fields={profileFields}
+                onSave={handleSaveField}
+                onAdd={handleAddField}
+              />
+            </section>
+          </>
+        )}
+      </div>
+    </>
+  )
+}

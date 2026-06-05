@@ -164,6 +164,142 @@ export async function uploadBaseline(file: File, signal?: AbortSignal): Promise<
   return handleResponse<Artifact>(res)
 }
 
+// --- Apply Queue ---
+
+import type {
+  ApplyQueueItem,
+  Application,
+  AutopilotConfig,
+  AnswerBankItem,
+  ProfileField,
+} from '@/types/apply'
+
+export async function getApplyQueue(signal?: AbortSignal): Promise<ApplyQueueItem[]> {
+  const res = await fetch(`${BASE}/api/apply/queue`, { signal })
+  return handleResponse<ApplyQueueItem[]>(res)
+}
+
+export async function listApplications(
+  status?: string,
+  signal?: AbortSignal,
+): Promise<Application[]> {
+  const url = new URL(`${BASE}/api/applications`)
+  if (status) url.searchParams.set('status', status)
+  const res = await fetch(url.toString(), { signal })
+  return handleResponse<Application[]>(res)
+}
+
+export async function approveApplication(id: string): Promise<Application> {
+  const res = await fetch(`${BASE}/api/applications/${id}/approve`, { method: 'POST' })
+  return handleResponse<Application>(res)
+}
+
+export interface ProcessApplicationResult {
+  id: string
+  application_id: string
+  status: string
+  dry_run: boolean
+  created_at: string
+}
+
+export async function processApplication(
+  id: string,
+  dryRun: boolean,
+): Promise<ProcessApplicationResult> {
+  const res = await fetch(`${BASE}/api/applications/${id}/process`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dry_run: dryRun }),
+  })
+  return handleResponse<ProcessApplicationResult>(res)
+}
+
+export async function updateApplicationStatus(
+  id: string,
+  status: string,
+): Promise<Application> {
+  const res = await fetch(`${BASE}/api/applications/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  })
+  return handleResponse<Application>(res)
+}
+
+// --- Profile Fields ---
+
+export async function getProfileFields(signal?: AbortSignal): Promise<ProfileField[]> {
+  const res = await fetch(`${BASE}/api/profile/fields`, { signal })
+  return handleResponse<ProfileField[]>(res)
+}
+
+export async function putProfileField(
+  key: string,
+  value: string,
+  is_knockout: boolean,
+): Promise<ProfileField> {
+  const res = await fetch(`${BASE}/api/profile/fields`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value, is_knockout }),
+  })
+  return handleResponse<ProfileField>(res)
+}
+
+export async function deleteProfileField(key: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/profile/fields/${encodeURIComponent(key)}`, {
+    method: 'DELETE',
+  })
+  await handleResponse<void>(res)
+}
+
+// --- Autopilot ---
+
+export async function getAutopilot(signal?: AbortSignal): Promise<AutopilotConfig> {
+  const res = await fetch(`${BASE}/api/profile/autopilot`, { signal })
+  return handleResponse<AutopilotConfig>(res)
+}
+
+export async function putAutopilot(config: AutopilotConfig): Promise<AutopilotConfig> {
+  const res = await fetch(`${BASE}/api/profile/autopilot`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  return handleResponse<AutopilotConfig>(res)
+}
+
+// --- Answer Bank ---
+
+export async function listAnswers(signal?: AbortSignal): Promise<AnswerBankItem[]> {
+  const res = await fetch(`${BASE}/api/answers`, { signal })
+  return handleResponse<AnswerBankItem[]>(res)
+}
+
+export async function createAnswer(
+  question: string,
+  answer: string,
+): Promise<AnswerBankItem> {
+  const res = await fetch(`${BASE}/api/answers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, answer }),
+  })
+  return handleResponse<AnswerBankItem>(res)
+}
+
+export async function approveAnswer(
+  id: string,
+  approved: boolean,
+): Promise<AnswerBankItem> {
+  const res = await fetch(`${BASE}/api/answers/${id}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ approved }),
+  })
+  return handleResponse<AnswerBankItem>(res)
+}
+
 // --- Evals ---
 
 import type { EvalRun } from '@/types/eval'
