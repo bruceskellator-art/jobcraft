@@ -29,6 +29,12 @@ class FormSource(Protocol):
         app: Application,
     ) -> list[FormField]: ...
 
+    async def has_captcha(
+        self,
+        job: JobPosting,
+        app: Application,
+    ) -> bool: ...
+
     async def submit_form(
         self,
         job: JobPosting,
@@ -61,6 +67,14 @@ class FakeFormSource:
         app: Application,
     ) -> list[FormField]:
         return list(self._fields)
+
+    async def has_captcha(
+        self,
+        job: JobPosting,
+        app: Application,
+    ) -> bool:
+        """Return the captcha flag set at construction time."""
+        return self._captcha
 
     async def submit_form(
         self,
@@ -95,6 +109,14 @@ class PlaywrightFormSource:
             "PlaywrightFormSource.render_form: Playwright driver not wired in this build. "
             "Use FakeFormSource for testing or implement the driver in a future phase."
         )
+
+    async def has_captcha(
+        self,
+        job: JobPosting,
+        app: Application,
+    ) -> bool:
+        """Playwright stub: returns False until driver is wired in."""
+        return False
 
     async def submit_form(
         self,

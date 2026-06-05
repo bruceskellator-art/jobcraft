@@ -455,3 +455,204 @@ class TestRunQueue:
         assert counts["submitted"] == 1
         assert counts["needs_review"] == 0
         assert counts["failed"] == 0
+
+
+# ---------------------------------------------------------------------------
+# Fix 1 regression: knockout detection by KNOCKOUT_KEYS name (is_knockout=False)
+# ---------------------------------------------------------------------------
+
+
+class TestKnockoutByName:
+    """Regression for fix #1: a field with is_knockout=False but name in KNOCKOUT_KEYS
+    must still force needs_review when the profile value is absent, even when all
+    other fields are high-confidence.
+    """
+
+    async def test_visa_status_no_flag_no_profile_forces_review(self, session) -> None:
+        """visa_status with is_knockout=False and no profile value → needs_review."""
+        user, job = await _seed_user_and_job(session, source="linkedin_easy_apply")
+        # Seed profile for the trivial fields but NOT for visa_status
+        await _seed_profile(session, user.id, with_work_auth=False)
+        app = Application(
+            id=uuid.uuid4(), user_id=user.id, job_id=job.id, status="queued"
+        )
+        session.add(app)
+        await session.flush()
+
+        # visa_status has is_knockout=False but its name is in KNOCKOUT_KEYS
+        visa_field = FormField(
+            name="visa_status",
+            label="Visa Status",
+            field_type="select",
+            required=True,
+            is_knockout=False,  # flag deliberately False to test name-based detection
+            options=["Citizen", "PR", "EP", "WP", "None"],
+        )
+        fields = list(_BASIC_FIELDS) + [visa_field]
+
+        form_source = FakeFormSource(fields)
+        embed = FakeEmbeddingAdapter(dim=64)
+        store = InMemoryVectorStore()
+        autopilot = _make_autopilot(mode="full")
+
+        attempt = await process_application(
+            session,
+            None,
+            embed,
+            store,
+            user.id,
+            app,
+            strategies=_make_strategies(form_source),
+            form_source=form_source,
+            autopilot=autopilot,
+            dry_run=False,
+        )
+
+        # Must be queued for review, NOT auto-submitted
+        assert attempt.outcome == "queued"
+        await session.refresh(app)
+        assert app.status == "needs_review"
+        assert len(form_source.submitted_field_maps) == 0, (
+            "Application must NOT be submitted when a KNOCKOUT_KEY field is unresolved"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Fix 2 regression: captcha detected early (before gate), blocks submission
+# ---------------------------------------------------------------------------
+
+
+class TestCaptchaEarlyDetection:
+    """Regression for fix #2: captcha=True with dry_run=True must block immediately;
+    submit_form must never be called.
+    """
+
+    async def test_captcha_true_dry_run_true_outcome_blocked(self, session) -> None:
+        user, job = await _seed_user_and_job(session, source="linkedin_easy_apply")
+        await _seed_profile(session, user.id)
+        app = Application(
+            id=uuid.uuid4(), user_id=user.id, job_id=job.id, status="queued"
+        )
+        session.add(app)
+        await session.flush()
+
+        # captcha=True simulates a bot-wall on the form page
+        form_source = FakeFormSource(_BASIC_FIELDS, captcha=True, dry_run=True)
+        embed = FakeEmbeddingAdapter(dim=64)
+        store = InMemoryVectorStore()
+        autopilot = _make_autopilot(mode="full")
+
+        attempt = await process_application(
+            session,
+            None,
+            embed,
+            store,
+            user.id,
+            app,
+            strategies=_make_strategies(form_source),
+            form_source=form_source,
+            autopilot=autopilot,
+            dry_run=True,
+        )
+
+        assert attempt.outcome == "blocked"
+        await session.refresh(app)
+        assert app.status == "blocked"
+        # submit_form must never have been called
+        assert len(form_source.submitted_field_maps) == 0, (
+            "submit_form must NOT be called when captcha is detected"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Fix 5 regression: daily cap is total across ALL sources
+# ---------------------------------------------------------------------------
+
+
+class TestDailyCapCrossSource:
+    """Regression for fix #5: daily cap counts submitted apps across all sources,
+    not just the current job's source.
+    """
+
+    async def test_cap_counts_across_different_sources(self, session) -> None:
+        from datetime import UTC, datetime
+
+        from app.db.models.job_posting import JobPosting as JP
+
+        user, job1 = await _seed_user_and_job(session, source="linkedin_easy_apply")
+        # Second job on a different source
+        job2 = JP(
+            id=uuid.uuid4(),
+            source="mycareersfuture",
+            source_url="https://mcf.gov.sg/job/2",
+            source_id=str(uuid.uuid4()),
+            company="Beta Corp",
+            title="Backend Engineer",
+            raw_content="",
+        )
+        session.add(job2)
+        await session.flush()
+
+        # Simulate an already-submitted application on job2 (different source)
+        existing_app = Application(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            job_id=job2.id,
+            status="submitted",
+            submitted_at=datetime.now(UTC),
+        )
+        session.add(existing_app)
+        await session.flush()
+
+        await _seed_profile(session, user.id)
+        new_app = Application(
+            id=uuid.uuid4(), user_id=user.id, job_id=job1.id, status="queued"
+        )
+        session.add(new_app)
+        await session.flush()
+
+        form_source = FakeFormSource(_BASIC_FIELDS)
+        embed = FakeEmbeddingAdapter(dim=64)
+        store = InMemoryVectorStore()
+        # cap=1: the existing submission on job2 should count and hit the cap
+        autopilot = _make_autopilot(mode="full", daily_cap=1)
+
+        attempt = await process_application(
+            session,
+            None,
+            embed,
+            store,
+            user.id,
+            new_app,
+            strategies=_make_strategies(form_source),
+            form_source=form_source,
+            autopilot=autopilot,
+            dry_run=False,
+        )
+
+        # Cross-source submission counts → cap hit → needs_review
+        assert attempt.outcome == "queued"
+        await session.refresh(new_app)
+        assert new_app.status == "needs_review"
+        assert len(form_source.submitted_field_maps) == 0
+
+
+# ---------------------------------------------------------------------------
+# Fix 6 regression: enqueue (user_id, job_id) uniqueness — double-enqueue yields one row
+# ---------------------------------------------------------------------------
+
+
+class TestEnqueueUniqueness:
+    """Regression for fix #6: enqueueing the same (user_id, job_id) twice must
+    return the same Application row (not create two rows).
+    """
+
+    async def test_double_enqueue_yields_one_row(self, session) -> None:
+        user, job = await _seed_user_and_job(session)
+
+        apps1 = await enqueue_applications(session, user.id, [job.id])
+        apps2 = await enqueue_applications(session, user.id, [job.id])
+
+        assert apps1[0].id == apps2[0].id, (
+            "Enqueueing the same (user_id, job_id) twice must return one row"
+        )

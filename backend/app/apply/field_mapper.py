@@ -82,17 +82,19 @@ async def _generate_why_role(
     job: JobPosting,
     cover_letter: str | None,
 ) -> tuple[str | None, float]:
-    """Generate a free-text 'why this role' answer using the cover letter corpus.
+    """Build a template-based 'why this role' answer from the cover letter corpus.
 
-    Returns (value, confidence). If no LLM is provided or cover_letter is
-    absent, returns (None, 0.0).
+    STUB: this function constructs a static template string from the cover
+    letter excerpt — it does NOT call the LLM.  A future task should replace
+    this with a versioned prompt call (using ``llm.complete``) for richer,
+    personalised answers.  ``source="cover_letter"`` is used because the
+    content derives from the user's cover letter text, not from LLM generation.
+
+    Returns (value, confidence). If cover_letter is absent, returns (None, 0.0).
     """
-    if llm is None or not cover_letter:
+    if not cover_letter:
         return None, _CONFIDENCE_NONE
 
-    # We synthesise a lightweight prompt directly; no PromptVersion needed for
-    # this inline call.  In a full implementation this would use a versioned
-    # prompt.  For now we derive an answer from the cover letter text.
     excerpt = cover_letter[:800]  # keep tokens low
     value = (
         f"Based on my background and interest in {job.company}, "

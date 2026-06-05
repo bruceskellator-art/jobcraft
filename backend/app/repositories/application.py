@@ -11,11 +11,11 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.application import Application
 from app.db.models.application_attempt import ApplicationAttempt
-from app.db.models.job_posting import JobPosting
 
 
 class ApplicationRepository:
@@ -34,7 +34,9 @@ class ApplicationRepository:
     ) -> Application:
         """Return existing Application or create one with status='queued'.
 
-        Deduplicates on (user_id, job_id) — returns the existing row if any.
+        Deduplicates on (user_id, job_id) via a savepoint so that a concurrent
+        INSERT that races the initial SELECT is handled gracefully: on
+        IntegrityError we roll back the savepoint and re-select the winner row.
         """
         result = await self._session.execute(
             select(Application).where(
@@ -46,16 +48,28 @@ class ApplicationRepository:
         if existing is not None:
             return existing
 
-        app = Application(
-            id=uuid.uuid4(),
-            user_id=user_id,
-            job_id=job_id,
-            status="queued",
-        )
-        self._session.add(app)
-        await self._session.flush()
-        await self._session.refresh(app)
-        return app
+        try:
+            async with self._session.begin_nested():  # savepoint
+                app = Application(
+                    id=uuid.uuid4(),
+                    user_id=user_id,
+                    job_id=job_id,
+                    status="queued",
+                )
+                self._session.add(app)
+                await self._session.flush()
+                await self._session.refresh(app)
+                return app
+        except IntegrityError:
+            # Another concurrent request inserted the same (user_id, job_id);
+            # re-select the existing row.
+            result = await self._session.execute(
+                select(Application).where(
+                    Application.user_id == user_id,
+                    Application.job_id == job_id,
+                )
+            )
+            return result.scalar_one()
 
     async def get(self, application_id: uuid.UUID) -> Application | None:
         """Return an Application by primary key, or None."""
@@ -74,7 +88,7 @@ class ApplicationRepository:
         stmt = select(Application).where(Application.user_id == user_id)
         if status is not None:
             stmt = stmt.where(Application.status == status)
-        stmt = stmt.order_by(Application.updated_at.desc().nullslast())
+        stmt = stmt.order_by(Application.updated_at.desc().nullslast(), Application.id.asc())
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
@@ -116,21 +130,22 @@ class ApplicationRepository:
     async def count_submitted_today(
         self,
         user_id: uuid.UUID,
-        source: str,
     ) -> int:
-        """Return number of submitted applications for user today for a given source.
+        """Return total number of submitted applications for user today (all sources).
 
-        Joins job_postings to filter by source, counting rows where
-        submitted_at is today (UTC) and status='submitted'.
+        Counts rows where submitted_at is today (UTC) and status='submitted',
+        across ALL job sources — this is the spec-intended daily total cap.
+
+        NOTE: under concurrent arq workers this COUNT is not lock-protected; a
+        distributed lock (Redis INCR or SELECT FOR UPDATE) is required for true
+        cap enforcement at scale — TODO for production.
         """
         today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
         result = await self._session.execute(
             select(func.count(Application.id))
-            .join(JobPosting, Application.job_id == JobPosting.id)
             .where(
                 Application.user_id == user_id,
                 Application.status == "submitted",
-                JobPosting.source == source,
                 Application.submitted_at >= today_start,
             )
         )

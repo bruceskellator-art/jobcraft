@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.apply.browser import FormSource
 from app.apply.gate import decide
 from app.apply.strategies import ApplyStrategy, select_strategy
-from app.apply.types import FieldMap, GateDecision
+from app.apply.types import ALLOWED_MANUAL_STATUSES, KNOCKOUT_KEYS, FieldMap, GateDecision
 from app.db.models.application import Application
 from app.db.models.application_attempt import ApplicationAttempt
 from app.embeddings.base import EmbeddingClient
@@ -37,20 +37,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Allowed status values for manual PATCH transitions.
-_ALLOWED_MANUAL_STATUSES = frozenset(
-    {
-        "interested",
-        "queued",
-        "needs_review",
-        "phone_screen",
-        "technical",
-        "onsite",
-        "offer",
-        "rejected",
-        "withdrawn",
-    }
-)
+# Re-export for callers that import the constant from this module.
+_ALLOWED_MANUAL_STATUSES = ALLOWED_MANUAL_STATUSES
 
 
 async def enqueue_applications(
@@ -120,6 +108,12 @@ async def process_application(
     latest_match = match_result.scalar_one_or_none()
     match_score: float | None = latest_match.overall_score if latest_match is not None else None
 
+    # Step 1: render the form to detect captcha BEFORE mapping or submitting.
+    captcha: bool = await form_source.has_captcha(job, app)
+
+    # Step 2: if captcha is detected the gate will BLOCK regardless; still
+    # map fields (for attempt logging) but gate prevents submission.
+
     # Select strategy and fill the form.
     strategy = select_strategy(job, strategies)
     field_map: FieldMap = await strategy.fill(
@@ -132,25 +126,24 @@ async def process_application(
         user_id,
     )
 
-    # Probe for captcha by attempting a dry-run submit on FakeFormSource;
-    # for real sources we infer captcha from outcome.
-    # We detect captcha by calling submit_form on a *probe* only when dry_run=False;
-    # otherwise we check for captcha via form_source.render_form result (best-effort).
-    # The gate accepts a captcha bool — we derive it conservatively.
-    captcha = False  # Will be updated after submission attempt when !dry_run.
-
-    # Detect unresolved knockouts (any field mapped with source="none" that is_knockout).
+    # Detect unresolved knockouts: a field is knockout if is_knockout flag OR
+    # its name matches a canonical KNOCKOUT_KEY — mirrors field_mapper._is_knockout.
     has_unresolved_knockout = any(
-        mf.field.is_knockout and mf.value is None for mf in field_map.fields
+        (mf.field.is_knockout or mf.field.name.lower() in KNOCKOUT_KEYS)
+        and mf.value is None
+        for mf in field_map.fields
     )
 
     # Enforce daily cap BEFORE the gate so it overrides AUTO_SUBMIT.
-    daily_count = await app_repo.count_submitted_today(user_id, job.source)
+    # NOTE: under concurrent arq workers this COUNT is not lock-protected; a
+    # distributed lock (Redis INCR or SELECT FOR UPDATE) is required for true
+    # cap enforcement at scale — TODO for production.
+    daily_count = await app_repo.count_submitted_today(user_id)
     cap_exceeded = daily_count >= autopilot.daily_cap
 
     if cap_exceeded:
         gate = _forced_review(
-            f"Daily cap of {autopilot.daily_cap} submissions reached for source '{job.source}'."
+            f"Daily cap of {autopilot.daily_cap} total submissions reached for today."
         )
     else:
         gate = decide(
@@ -194,9 +187,6 @@ async def process_application(
             )
         else:
             apply_outcome = await strategy.submit(job, field_map)
-            captcha = apply_outcome.blocked_reason is not None and "CAPTCHA" in (
-                apply_outcome.blocked_reason or ""
-            )
             if apply_outcome.outcome == "submitted":
                 outcome_str = "submitted"
                 apply_mode = "auto"

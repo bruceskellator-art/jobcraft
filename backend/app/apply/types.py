@@ -8,6 +8,22 @@ KNOCKOUT_KEYS: frozenset[str] = frozenset(
     {"work_authorization", "visa_status", "citizenship", "years_of_experience"}
 )
 
+# Status values that may be set via the manual PATCH /applications/{id}/status endpoint.
+# Shared between apply_orchestration and the API router to avoid drift.
+ALLOWED_MANUAL_STATUSES: frozenset[str] = frozenset(
+    {
+        "interested",
+        "queued",
+        "needs_review",
+        "phone_screen",
+        "technical",
+        "onsite",
+        "offer",
+        "rejected",
+        "withdrawn",
+    }
+)
+
 
 class FormField(BaseModel):
     name: str
@@ -33,6 +49,12 @@ class FieldMap(BaseModel):
     the overall score toward 0, making the gate conservative by default.
     Mean is preferred over min because it reflects aggregate quality rather
     than a single worst case that might be a non-critical optional field.
+
+    NOTE: the mean confidence alone does NOT protect against knockout fields —
+    a form with many high-confidence trivial fields could still pass the
+    confidence threshold even with an unresolved knockout.  The real knockout
+    safety mechanism is ``has_unresolved_knockout`` checked in
+    ``apply_orchestration.process_application`` and enforced by ``gate.decide``.
     """
 
     fields: list[MappedField]

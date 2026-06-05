@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.answer_bank import AnswerBank
@@ -55,17 +55,21 @@ class AnswerBankRepository:
         return entry
 
     async def set_approved(self, answer: AnswerBank, approved: bool) -> AnswerBank:
-        """Set the approved flag and flush. Returns the updated entry."""
-        answer.approved = approved
-        self._session.add(answer)
+        """Set the approved flag via SQL UPDATE (immutable pattern). Returns the updated entry."""
+        await self._session.execute(
+            update(AnswerBank).where(AnswerBank.id == answer.id).values(approved=approved)
+        )
         await self._session.flush()
         await self._session.refresh(answer)
         return answer
 
     async def increment_reuse(self, answer: AnswerBank) -> AnswerBank:
-        """Increment reuse_count by 1 and flush. Returns the updated entry."""
-        answer.reuse_count = (answer.reuse_count or 0) + 1
-        self._session.add(answer)
+        """Increment reuse_count by 1 via SQL UPDATE (immutable pattern)."""
+        await self._session.execute(
+            update(AnswerBank)
+            .where(AnswerBank.id == answer.id)
+            .values(reuse_count=AnswerBank.reuse_count + 1)
+        )
         await self._session.flush()
         await self._session.refresh(answer)
         return answer

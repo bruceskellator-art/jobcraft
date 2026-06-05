@@ -79,6 +79,7 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             server_default=sa.func.now(),
         ),
+        sa.UniqueConstraint("user_id", "job_id", name="uq_applications_user_job"),
     )
 
     op.create_table(

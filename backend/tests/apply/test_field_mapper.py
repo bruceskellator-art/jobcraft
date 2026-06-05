@@ -88,10 +88,11 @@ async def test_knockout_field_filled_from_profile(session: AsyncSession) -> None
 class _TrackingLLM:
     """Fake LLM that fails the test if called (should never be called for knockout)."""
 
-    calls: list[str] = []
+    def __init__(self) -> None:
+        self.calls: list[str] = []
 
     async def complete(self, *args: object, **kwargs: object) -> object:
-        _TrackingLLM.calls.append("called")
+        self.calls.append("called")
         raise AssertionError(
             "LLM was called for a knockout field — safety rule violation!"
         )
@@ -106,7 +107,6 @@ async def test_knockout_field_missing_profile_leaves_unfilled(
     embed = FakeEmbeddingAdapter(dim=64)
     store = InMemoryVectorStore()
     tracking_llm = _TrackingLLM()
-    _TrackingLLM.calls.clear()
 
     field = _text_field("work_authorization", "Work Authorization", is_knockout=True)
     job = _make_job()
@@ -124,7 +124,7 @@ async def test_knockout_field_missing_profile_leaves_unfilled(
     assert mf.confidence == 0.0
 
     # Assert — LLM was NOT called (safety invariant)
-    assert _TrackingLLM.calls == [], "LLM must never be called for knockout fields"
+    assert tracking_llm.calls == [], "LLM must never be called for knockout fields"
 
 
 # ---------------------------------------------------------------------------
@@ -139,7 +139,6 @@ async def test_knockout_key_triggers_profile_only_logic(session: AsyncSession) -
     embed = FakeEmbeddingAdapter(dim=64)
     store = InMemoryVectorStore()
     tracking_llm = _TrackingLLM()
-    _TrackingLLM.calls.clear()
 
     # No profile value for visa_status
     field = _text_field("visa_status", "Visa Status", is_knockout=False)  # flag is False
@@ -152,7 +151,7 @@ async def test_knockout_key_triggers_profile_only_logic(session: AsyncSession) -
     mf = field_map.fields[0]
     assert mf.value is None
     assert mf.source == "none"
-    assert _TrackingLLM.calls == [], "LLM must not be called for canonical knockout keys"
+    assert tracking_llm.calls == [], "LLM must not be called for canonical knockout keys"
 
 
 # ---------------------------------------------------------------------------

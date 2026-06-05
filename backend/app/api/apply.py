@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.apply.browser import FormSource
 from app.apply.strategies import ApplyStrategy
+from app.apply.types import ALLOWED_MANUAL_STATUSES
 from app.db.base import get_session
 from app.db.models.user import User
 from app.deps import (
@@ -37,6 +38,7 @@ from app.schemas.apply import (
     ApplicationAttemptRead,
     ApplicationRead,
     ApplyQueueItem,
+    ApproveRequest,
     EnqueueRequest,
     FieldMapView,
     JobSummary,
@@ -50,20 +52,8 @@ from app.vectorstore.base import VectorStore
 
 router = APIRouter(tags=["apply"])
 
-# Statuses that may be set via the manual PATCH endpoint.
-_ALLOWED_MANUAL_STATUSES = frozenset(
-    {
-        "interested",
-        "queued",
-        "needs_review",
-        "phone_screen",
-        "technical",
-        "onsite",
-        "offer",
-        "rejected",
-        "withdrawn",
-    }
-)
+# Statuses that may be set via the manual PATCH endpoint (shared constant).
+_ALLOWED_MANUAL_STATUSES = ALLOWED_MANUAL_STATUSES
 
 
 # ---------------------------------------------------------------------------
@@ -211,7 +201,7 @@ async def process_one(
 @router.post("/api/applications/{application_id}/approve", response_model=ApplicationRead)
 async def approve_application(
     application_id: uuid.UUID,
-    body: RunQueueRequest = RunQueueRequest(),  # noqa: B008
+    body: ApproveRequest = ApproveRequest(),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
     llm: LLMClient = Depends(get_llm_client),  # noqa: B008
@@ -222,8 +212,9 @@ async def approve_application(
 ) -> ApplicationRead:
     """User approves the reviewed field map and triggers submission.
 
-    Re-runs process_application with dry_run=False (or honoring body.dry_run).
-    The gate is re-evaluated; a BLOCK at this stage still prevents submission.
+    Re-runs process_application with dry_run=False by default — an explicit
+    user approval is intended to submit.  The gate is re-evaluated; a BLOCK
+    at this stage still prevents submission.
     """
     app_repo = ApplicationRepository(session)
     app = await app_repo.get(application_id)

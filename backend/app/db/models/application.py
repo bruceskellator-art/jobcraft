@@ -41,6 +41,7 @@ class Application(Base):
             "apply_mode IN ('auto','assisted','manual')",
             name="applications_apply_mode_check",
         ),
+        sa.UniqueConstraint("user_id", "job_id", name="uq_applications_user_job"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, primary_key=True, default=uuid.uuid4)

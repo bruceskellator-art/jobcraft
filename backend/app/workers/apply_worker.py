@@ -56,6 +56,16 @@ async def process_application_task(ctx: dict, application_id: str) -> dict:
             ]
             autopilot = await get_autopilot_config(session, app.user_id)
 
+            # Defense-in-depth: never submit when autopilot is off,
+            # even if enqueued by another code path.
+            if autopilot.mode == "off":
+                logger.info(
+                    "Autopilot mode='off' for user %s — skipping application %s",
+                    app.user_id,
+                    application_id,
+                )
+                return {"outcome": "skipped", "application_id": application_id}
+
             async with session.begin():
                 llm = LLMClient(session=session, adapter=AnthropicAdapter())
                 attempt = await process_application(

@@ -87,6 +87,16 @@ class RunQueueRequest(BaseModel):
     dry_run: bool = True
 
 
+class ApproveRequest(BaseModel):
+    """Request body for POST /api/applications/{id}/approve.
+
+    dry_run defaults to False because an explicit user approval is intended
+    to trigger real submission.  Pass dry_run=True only for testing.
+    """
+
+    dry_run: bool = False
+
+
 class StatusUpdateRequest(BaseModel):
     """Request body for PATCH /api/applications/{id}/status."""
 
