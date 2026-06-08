@@ -4,7 +4,7 @@
 
 JobCraft scrapes job listings (Singapore-focused), deeply analyzes each one, scores your fit, identifies skill gaps, generates tailored resumes and cover letters — all grounded in your actual experience — and **auto-applies at scale** through a single review queue, with full observability and evals.
 
-**Status:** Specification phase. Implementation incoming.
+**Status:** Phases 0–7 implemented. ~370 backend tests green. Phase 8 (email status sync) pending.
 
 ## Why
 
@@ -54,6 +54,10 @@ pnpm dev
 ```
 
 Copy `.env.example` to `.env` and fill in your API keys before starting the backend.
+
+## Architecture
+
+See [docs/architecture.md](docs/architecture.md) for the full architecture — component map, data model, API surface, key design decisions (grounded generation, apply-engine safety invariants, provider abstractions for network-free tests), and phase status.
 
 ## The Spec
 
