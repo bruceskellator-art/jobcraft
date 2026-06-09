@@ -336,3 +336,57 @@ export async function runEvalSuite(
   })
   return handleResponse<EvalRun>(res)
 }
+
+// --- Admin: LLM Calls ---
+
+import type {
+  LlmCall,
+  LlmCallDetail,
+  CallCostResponse,
+  PromptVersion,
+  PromptDetail,
+} from '@/types/observability'
+
+export interface ListAdminCallsParams {
+  prompt_version_id?: string
+  model?: string
+  since?: string
+  until?: string
+  limit?: number
+}
+
+export async function listAdminCalls(
+  params?: ListAdminCallsParams,
+  signal?: AbortSignal,
+): Promise<LlmCall[]> {
+  const url = new URL(`${BASE}/api/admin/calls`)
+  if (params?.prompt_version_id) url.searchParams.set('prompt_version_id', params.prompt_version_id)
+  if (params?.model) url.searchParams.set('model', params.model)
+  if (params?.since) url.searchParams.set('since', params.since)
+  if (params?.until) url.searchParams.set('until', params.until)
+  if (params?.limit !== undefined) url.searchParams.set('limit', String(params.limit))
+  const res = await fetch(url.toString(), { signal })
+  return handleResponse<LlmCall[]>(res)
+}
+
+export async function getCallCost(signal?: AbortSignal): Promise<CallCostResponse> {
+  const res = await fetch(`${BASE}/api/admin/calls/cost`, { signal })
+  return handleResponse<CallCostResponse>(res)
+}
+
+export async function getAdminCall(id: string, signal?: AbortSignal): Promise<LlmCallDetail> {
+  const res = await fetch(`${BASE}/api/admin/calls/${id}`, { signal })
+  return handleResponse<LlmCallDetail>(res)
+}
+
+// --- Admin: Prompts ---
+
+export async function listPrompts(signal?: AbortSignal): Promise<Record<string, PromptVersion[]>> {
+  const res = await fetch(`${BASE}/api/admin/prompts`, { signal })
+  return handleResponse<Record<string, PromptVersion[]>>(res)
+}
+
+export async function getPrompt(id: string, signal?: AbortSignal): Promise<PromptDetail> {
+  const res = await fetch(`${BASE}/api/admin/prompts/${id}`, { signal })
+  return handleResponse<PromptDetail>(res)
+}
