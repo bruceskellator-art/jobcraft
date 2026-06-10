@@ -1,4 +1,4 @@
-.PHONY: up down dev-backend dev-frontend test-backend lint fmt
+.PHONY: up down dev-backend dev-frontend test-backend typecheck lint fmt
 
 # ── Docker Compose ────────────────────────────────────────────────────────────
 
@@ -16,9 +16,13 @@ down:
 dev-backend:
 	cd backend && uvicorn app.main:app --reload
 
-## Run backend tests
+## Run backend tests (from backend/ so pyproject config is discovered)
 test-backend:
-	pytest backend/tests -q
+	cd backend && pytest tests -q
+
+## Type-check backend (must run from backend/ for mypy config)
+typecheck:
+	cd backend && mypy app
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
@@ -30,10 +34,10 @@ dev-frontend:
 
 ## Lint backend (ruff) and frontend (eslint via pnpm lint)
 lint:
-	ruff check backend
+	cd backend && ruff check .
 	cd frontend && pnpm lint
 
 ## Auto-fix backend formatting (ruff format) and frontend (prettier via pnpm)
 fmt:
-	ruff format backend
+	cd backend && ruff format .
 	cd frontend && pnpm format 2>/dev/null || true

@@ -40,7 +40,7 @@ def _format_score(score: float | None) -> str:
     return f"{score:.3f}"
 
 
-def _print_suite_results(eval_run: object, suite_result_data: list[dict]) -> None:  # type: ignore[type-arg]
+def _print_suite_results(eval_run: object, suite_result_data: list[dict]) -> None:
     """Print per-case and per-assertion results plus aggregate."""
     rows: list[tuple[str, str, str, str]] = []
     for case_data in suite_result_data:
@@ -70,7 +70,7 @@ def _print_suite_results(eval_run: object, suite_result_data: list[dict]) -> Non
 # ---------------------------------------------------------------------------
 
 
-def build_mock_deps() -> tuple:  # type: ignore[type-arg]
+def build_mock_deps() -> tuple:
     """Build a (llm_factory, embed, store) triple of offline mock deps.
 
     The llm_factory binds a fresh LLMClient (sharing one MockAdapter) to each

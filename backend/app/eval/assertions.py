@@ -72,7 +72,7 @@ async def run_groundedness(
     Reuses check_groundedness from app.generator.service; experience_items
     should be the ExperienceItem ORM instances used to generate the text.
     """
-    from app.generator.service import check_groundedness  # type: ignore[attr-defined]
+    from app.generator.service import check_groundedness
 
     try:
         result = await check_groundedness(session, llm, text, experience_items)  # type: ignore[arg-type]
@@ -163,7 +163,7 @@ async def run_llm_judge(
             )
             pv = result.scalar_one()
 
-    from app.llm.client import LLMClient  # type: ignore[attr-defined]
+    from app.llm.client import LLMClient
 
     typed_llm: LLMClient = llm  # type: ignore[assignment]
 
