@@ -24,6 +24,19 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379/0")
     cors_origins: list[str] = Field(default=["http://localhost:3000"])
 
+    # Email sync — set to a Fernet key generated via:
+    #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # None (default) disables email sync entirely.
+    token_encryption_key: str | None = Field(
+        default=None,
+        description=(
+            "Fernet symmetric key for encrypting OAuth tokens at rest. "
+            "Must be a URL-safe base64-encoded 32-byte key. "
+            "Set via JOBCRAFT_TOKEN_ENCRYPTION_KEY env var. "
+            "None disables email sync."
+        ),
+    )
+
 
 @functools.lru_cache
 def get_settings() -> Settings:

@@ -25,6 +25,10 @@ dependencies = [
     "qdrant-client>=1.9",
     "pyyaml>=6.0",
     "arq>=0.25",
+    "cryptography>=42.0",
+    # Gmail and Outlook providers — lazy-imported; package works without them.
+    "google-api-python-client>=2.0",
+    "msal>=1.28",
 ]
 
 [project.optional-dependencies]
@@ -56,6 +60,11 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.12"
 disallow_untyped_defs = true
 warn_unused_ignores = true
+ignore_missing_imports = true
+
+# Third-party SDKs without type stubs (lazy-imported in provider/worker code).
+[[tool.mypy.overrides]]
+module = ["googleapiclient", "googleapiclient.*", "msal", "msal.*", "google.*", "google_auth_oauthlib.*", "arq", "arq.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
