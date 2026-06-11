@@ -8,6 +8,7 @@ from app.api.admin_evals import router as admin_evals_router
 from app.api.admin_prompts import router as admin_prompts_router
 from app.api.answers import router as answers_router
 from app.api.apply import router as apply_router
+from app.api.email import router as email_router
 from app.api.experience import router as experience_router
 from app.api.generation import router as generation_router
 from app.api.jobs import router as jobs_router
@@ -39,6 +40,7 @@ def create_app() -> FastAPI:
     application.include_router(admin_prompts_router)
     application.include_router(answers_router)
     application.include_router(apply_router)
+    application.include_router(email_router)
     application.include_router(experience_router)
     application.include_router(generation_router)
     application.include_router(jobs_router)

@@ -1,0 +1,79 @@
+name: status_classification_v1
+description: >
+  Validates that the LLM email classifier produces the correct classification
+  label and suggested_status for representative email types (rejection,
+  interview invite, offer).
+
+  Assertion strategy:
+    The eval runner generates text by invoking the LLM on each case's
+    user_corpus + job fixture. Since the email classifier returns JSON
+    containing 'classification' and 'suggested_status' fields, we use
+    contains_skill to check for the expected label string and excludes_phrase
+    to ensure mis-classifications are absent.
+
+  Note: A dedicated `json_field` assertion kind (e.g. kind: json_field,
+  path: classification, expected: rejected) would be cleaner here.
+  That assertion is not yet implemented in app/eval/types.py. Until it is,
+  contains_skill and excludes_phrase over the raw JSON output are the correct
+  assertion kinds to use — they will correctly match label strings like
+  "rejected", "interview", "offer" inside the JSON response.
+
+  Fixture emails are in eval/fixtures/emails/.
+
+cases:
+  - id: rejection_acme_001
+    # Rejection email from a recruiter at acmecorp.com.
+    # Expected: classification=rejected, suggested_status=rejected.
+    user_corpus: fixtures/user_bruce.json
+    job: fixtures/jobs/anthropic_fde.json
+    assertions:
+      - kind: contains_skill
+        skill: "rejected"
+      - kind: excludes_phrase
+        phrase: "interview"
+      - kind: excludes_phrase
+        phrase: "offer"
+      - kind: llm_judge
+        rubric: >
+          The classifier output should contain a JSON object with
+          'classification' set to 'rejected' and 'confidence' above 0.7.
+          Score 1.0 if both conditions are met, 0.0 otherwise.
+        threshold: 0.6
+
+  - id: interview_invite_betacorp_001
+    # Interview invitation from talent@betacorp.io.
+    # Expected: classification=interview_invite or phone_screen, NOT rejected.
+    user_corpus: fixtures/user_bruce.json
+    job: fixtures/jobs/anthropic_fde.json
+    assertions:
+      - kind: contains_skill
+        skill: "interview"
+      - kind: excludes_phrase
+        phrase: "rejected"
+      - kind: excludes_phrase
+        phrase: "we regret"
+      - kind: llm_judge
+        rubric: >
+          The classifier output should identify this as an interview invitation
+          or phone screen — classification should be 'interview_invite' or
+          'phone_screen'. Score 1.0 if the classification is not 'rejected'
+          and confidence is above 0.7, 0.0 otherwise.
+        threshold: 0.6
+
+  - id: offer_gammainc_001
+    # Job offer email from hr@gammainc.com.
+    # Expected: classification=offer, suggested_status=offer.
+    user_corpus: fixtures/user_bruce.json
+    job: fixtures/jobs/anthropic_fde.json
+    assertions:
+      - kind: contains_skill
+        skill: "offer"
+      - kind: excludes_phrase
+        phrase: "rejected"
+      - kind: excludes_phrase
+        phrase: "not moving forward"
+      - kind: llm_judge
+        rubric: >
+          The classifier output should contain 'offer' as the classification
+          and confidence above 0.8. Score 1.0 if both are true, 0.0 otherwise.
+        threshold: 0.6

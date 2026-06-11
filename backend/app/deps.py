@@ -10,7 +10,10 @@ from app.apply.browser import FormSource, PlaywrightFormSource
 from app.apply.strategies import ApplyStrategy, GenericFormStrategy, GreenhouseFormStrategy
 from app.config import get_settings
 from app.db.base import _get_session_factory, get_session
+from app.db.models.email_account import EmailAccount
 from app.db.models.user import User
+from app.email_sync.crypto import TokenCrypto
+from app.email_sync.provider import EmailProvider, GmailProvider, OutlookProvider
 from app.embeddings.base import EmbeddingClient
 from app.embeddings.openai_adapter import OpenAIEmbeddingAdapter
 from app.generator.pdf import NullPdfRenderer, PdfRenderer
@@ -152,6 +155,51 @@ def get_apply_strategies(
         GreenhouseFormStrategy(form_source),
         GenericFormStrategy(form_source),
     ]
+
+
+def get_token_crypto() -> TokenCrypto:
+    """Return a TokenCrypto instance backed by the configured Fernet key.
+
+    Raises HTTP 503 if JOBCRAFT_TOKEN_ENCRYPTION_KEY is not set, which disables
+    the email sync feature entirely in that deployment.
+
+    In tests, override this dependency with a TokenCrypto built from a generated key:
+
+        from cryptography.fernet import Fernet
+        key = Fernet.generate_key().decode()
+        app.dependency_overrides[get_token_crypto] = lambda: TokenCrypto(key)
+    """
+    key = get_settings().token_encryption_key
+    if not key:
+        raise HTTPException(
+            status_code=503,
+            detail="Email sync not configured — JOBCRAFT_TOKEN_ENCRYPTION_KEY is unset.",
+        )
+    return TokenCrypto(key)
+
+
+def get_email_provider(account: EmailAccount) -> EmailProvider:
+    """Build a provider instance for the given EmailAccount.
+
+    Decrypts the account's stored token and constructs the appropriate provider.
+    The token is used only to build the provider and is never logged or returned.
+
+    In tests, override this factory or the get_token_crypto dependency and supply
+    a FakeEmailProvider via the route's provider argument.
+    """
+    crypto = get_token_crypto()
+    token = crypto.decrypt(account.oauth_token_enc)
+    access_token: str = token.get("access_token", "")
+
+    if account.provider == "gmail":
+        return GmailProvider(access_token=access_token)
+    if account.provider == "outlook":
+        return OutlookProvider(access_token=access_token)
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unsupported email provider: {account.provider!r}",
+    )
 
 
 def get_source_factory() -> Callable[[list[str], list[str]], list[JobSource]]:

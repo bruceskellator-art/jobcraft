@@ -1,0 +1,14 @@
+From: recruiting@acmecorp.com
+Subject: Update on your application — Software Engineer
+Date: 2026-06-24
+
+Dear Candidate,
+
+Thank you for taking the time to interview with Acme Corp for the Software Engineer position.
+
+After careful consideration, we have decided to move forward with other candidates whose experience more closely matches our current needs. We were impressed by your background and encourage you to apply for future opportunities with us.
+
+We appreciate your interest in Acme Corp and wish you the best in your job search.
+
+Best regards,
+Acme Recruiting Team

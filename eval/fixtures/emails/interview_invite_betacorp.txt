@@ -1,0 +1,15 @@
+From: talent@betacorp.io
+Subject: Interview Invitation — Senior Backend Engineer at BetaCorp
+Date: 2026-06-24
+
+Hi,
+
+Congratulations! We've reviewed your application for the Senior Backend Engineer role at BetaCorp and would love to move forward with a technical phone screen.
+
+Please use the link below to schedule a 45-minute call with our engineering team at your earliest convenience:
+https://calendly.com/betacorp-eng/phone-screen
+
+We look forward to speaking with you!
+
+Best,
+BetaCorp Talent Team
