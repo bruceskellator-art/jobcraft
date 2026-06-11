@@ -4,7 +4,7 @@
 
 JobCraft scrapes job listings (Singapore-focused), deeply analyzes each one, scores your fit, identifies skill gaps, generates tailored resumes and cover letters — all grounded in your actual experience — and **auto-applies at scale** through a single review queue, with full observability and evals.
 
-**Status:** Phases 0–7 implemented. ~370 backend tests green. Phase 8 (email status sync) pending.
+**Status:** Phases 0–8 implemented. 463 backend tests green; frontend builds clean.
 
 ## Why
 

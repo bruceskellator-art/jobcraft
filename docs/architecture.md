@@ -1,6 +1,6 @@
 # JobCraft — Architecture
 
-> Last updated: 2026-06-24. Phases 0–7 implemented; Phase 8 (email status sync) specced but not yet built.
+> Last updated: 2026-06-24. Phases 0–8 implemented (463 backend tests green; frontend builds clean).
 
 ---
 
@@ -101,7 +101,7 @@ All tables use UUID primary keys. `created_at` / `updated_at` default to `now()`
 | `llm_calls` | Immutable audit log of every LLM call: rendered prompt, raw response, parsed response, token counts, latency, cost in USD, and any error. | `prompt_version_id → prompt_versions` |
 | `eval_runs` | Persisted result of a full eval suite run: per-case results and aggregate scores. | `prompt_version_id → prompt_versions` |
 
-> **Not yet implemented (Phase 8 / v2):** `email_accounts`, `email_messages`, `status_events` — required for automated email-based status sync.
+> **Email status sync (Phase 8):** `email_accounts` (encrypted OAuth tokens, read-only scopes), `email_messages` (only mail matched to an application is persisted), `status_events` (proposed/applied/dismissed transitions) — power the automated inbox → status pipeline (§ Email Status Tracker).
 
 ---
 
@@ -227,4 +227,4 @@ Stack: Next.js 15 · React 19 · Tailwind v4 · shadcn/ui · App Router.
 | 5 | Eval suite + prompt versioning | Done |
 | 6 | Auto-apply engine (field-mapper, gate, answer bank) | Done |
 | 7 | Application pipeline + observability (arq worker, cost tracking) | Done |
-| 8 | Email status sync (inbox reader, LLM classifier, status events) | Specced, not built |
+| 8 | Email status sync (read-only OAuth, match→classify→gate pipeline, status events, SSE, eval suite) | Implemented |
