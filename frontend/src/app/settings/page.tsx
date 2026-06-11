@@ -16,6 +16,7 @@ import {
 import { AutopilotForm } from '@/components/settings/AutopilotForm'
 import { AnswerBank } from '@/components/settings/AnswerBank'
 import { ProfileFields } from '@/components/settings/ProfileFields'
+import { EmailSync } from '@/components/settings/EmailSync'
 
 const SOURCES = [
   { name: 'LinkedIn', key: 'linkedin', trusted: true },
@@ -187,6 +188,9 @@ export default function SettingsPage() {
                 onAdd={handleAddField}
               />
             </section>
+
+            {/* Email Sync */}
+            <EmailSync />
           </>
         )}
       </div>

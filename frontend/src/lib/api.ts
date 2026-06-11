@@ -390,3 +390,67 @@ export async function getPrompt(id: string, signal?: AbortSignal): Promise<Promp
   const res = await fetch(`${BASE}/api/admin/prompts/${id}`, { signal })
   return handleResponse<PromptDetail>(res)
 }
+
+// --- Email sync ---
+
+import type {
+  EmailAccount,
+  ConnectEmailBody,
+  SyncResult,
+  StatusEvent,
+} from '@/types/email'
+
+export async function connectEmail(
+  body: ConnectEmailBody,
+  signal?: AbortSignal,
+): Promise<EmailAccount> {
+  const res = await fetch(`${BASE}/api/email/connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  })
+  return handleResponse<EmailAccount>(res)
+}
+
+export async function listEmailAccounts(signal?: AbortSignal): Promise<EmailAccount[]> {
+  const res = await fetch(`${BASE}/api/email/accounts`, { signal })
+  return handleResponse<EmailAccount[]>(res)
+}
+
+export async function disconnectEmail(id: string, signal?: AbortSignal): Promise<void> {
+  const res = await fetch(`${BASE}/api/email/accounts/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    signal,
+  })
+  await handleResponse<void>(res)
+}
+
+export async function syncEmailAccount(id: string, signal?: AbortSignal): Promise<SyncResult> {
+  const res = await fetch(`${BASE}/api/email/accounts/${encodeURIComponent(id)}/sync`, {
+    method: 'POST',
+    signal,
+  })
+  return handleResponse<SyncResult>(res)
+}
+
+export async function listProposedStatusEvents(signal?: AbortSignal): Promise<StatusEvent[]> {
+  const res = await fetch(`${BASE}/api/status-events?state=proposed`, { signal })
+  return handleResponse<StatusEvent[]>(res)
+}
+
+export async function confirmStatusEvent(id: string, signal?: AbortSignal): Promise<StatusEvent> {
+  const res = await fetch(`${BASE}/api/status-events/${encodeURIComponent(id)}/confirm`, {
+    method: 'POST',
+    signal,
+  })
+  return handleResponse<StatusEvent>(res)
+}
+
+export async function dismissStatusEvent(id: string, signal?: AbortSignal): Promise<StatusEvent> {
+  const res = await fetch(`${BASE}/api/status-events/${encodeURIComponent(id)}/dismiss`, {
+    method: 'POST',
+    signal,
+  })
+  return handleResponse<StatusEvent>(res)
+}

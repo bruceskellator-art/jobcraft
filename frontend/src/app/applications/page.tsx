@@ -7,6 +7,7 @@ import type { JobPosting } from '@/types/job'
 import { listApplications, listJobs, updateApplicationStatus } from '@/lib/api'
 import { KanbanColumn } from '@/components/applications/KanbanColumn'
 import type { ApplicationCardData } from '@/components/applications/ApplicationCard'
+import { ProposedEvents } from '@/components/applications/ProposedEvents'
 
 interface Column {
   id: string
@@ -196,25 +197,34 @@ export default function ApplicationsPage() {
         )}
 
         {!isLoading && !loadError && (
-          <div className="grid grid-cols-5 gap-4 min-w-[1060px]">
-            {COLUMNS.map((col) => {
-              const colApps = applications.filter((a) => col.statuses.includes(a.status))
-              return (
-                <KanbanColumn
-                  key={col.id}
-                  id={col.id}
-                  label={col.label}
-                  dotColor={col.dotColor}
-                  countColor={col.countColor}
-                  countBg={col.countBg}
-                  applications={colApps}
-                  jobsById={jobsById}
-                  onStatusChange={handleStatusChange}
-                  onDrop={handleDrop}
-                />
-              )
-            })}
-          </div>
+          <>
+            <ProposedEvents
+              onBoardRefresh={() => {
+                const controller = new AbortController()
+                dispatch({ type: 'fetch_start' })
+                loadData(controller.signal)
+              }}
+            />
+            <div className="grid grid-cols-5 gap-4 min-w-[1060px]">
+              {COLUMNS.map((col) => {
+                const colApps = applications.filter((a) => col.statuses.includes(a.status))
+                return (
+                  <KanbanColumn
+                    key={col.id}
+                    id={col.id}
+                    label={col.label}
+                    dotColor={col.dotColor}
+                    countColor={col.countColor}
+                    countBg={col.countBg}
+                    applications={colApps}
+                    jobsById={jobsById}
+                    onStatusChange={handleStatusChange}
+                    onDrop={handleDrop}
+                  />
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </>
