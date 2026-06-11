@@ -38,3 +38,7 @@ tests/cassettes/
 
 # Logs
 *.log
+
+# Claude Code local files (machine-specific)
+.claude/settings.local.json
+.claude/worktrees/
