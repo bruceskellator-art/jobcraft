@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.env
+.env.local
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+out/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Data / artifacts
+data/
+*.db
+*.sqlite
+
+# LLM call cassettes (huge)
+tests/cassettes/
+
+# Logs
+*.log
