@@ -15,14 +15,19 @@ from app.db.models.user import User
 from app.email_sync.crypto import TokenCrypto
 from app.email_sync.provider import EmailProvider, GmailProvider, OutlookProvider
 from app.embeddings.base import EmbeddingClient
+from app.embeddings.fake import FakeEmbeddingAdapter
 from app.embeddings.openai_adapter import OpenAIEmbeddingAdapter
 from app.generator.pdf import NullPdfRenderer, PdfRenderer
 from app.llm.adapters.anthropic import AnthropicAdapter
+from app.llm.adapters.base import LLMAdapter
+from app.llm.adapters.deepseek import DeepSeekAdapter
+from app.llm.adapters.openai import OpenAIAdapter
 from app.llm.client import LLMClient
 from app.scrapers.base import JobSource
 from app.scrapers.greenhouse import GreenhouseSource
 from app.scrapers.lever import LeverSource
 from app.vectorstore.base import VectorStore
+from app.vectorstore.memory import InMemoryVectorStore
 from app.vectorstore.qdrant_adapter import QdrantVectorStore
 
 # Phase-1 stand-in for real authentication.
@@ -55,36 +60,52 @@ async def get_current_user(
     return user
 
 
+def _build_llm_adapter() -> LLMAdapter:
+    """Return the LLM adapter selected by JOBCRAFT_LLM_PROVIDER."""
+    provider = get_settings().llm_provider
+    if provider == "deepseek":
+        return DeepSeekAdapter()
+    if provider == "openai":
+        return OpenAIAdapter()
+    return AnthropicAdapter()
+
+
 def get_llm_client(
     session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> LLMClient:
-    """Build an LLMClient backed by AnthropicAdapter for production use.
+    """Build an LLMClient using the adapter selected by JOBCRAFT_LLM_PROVIDER.
+
+    Defaults to AnthropicAdapter. Set JOBCRAFT_LLM_PROVIDER=deepseek to use
+    DeepSeek, or JOBCRAFT_LLM_PROVIDER=openai to use OpenAI.
 
     In tests, override this dependency with a MockAdapter-backed LLMClient:
 
         app.dependency_overrides[get_llm_client] = lambda: LLMClient(session, MockAdapter(...))
     """
-    return LLMClient(session=session, adapter=AnthropicAdapter())
+    return LLMClient(session=session, adapter=_build_llm_adapter())
 
 
 def get_embedding_client() -> EmbeddingClient:
-    """Build an OpenAIEmbeddingAdapter for production use.
+    """Build an embedding client selected by JOBCRAFT_EMBEDDING_PROVIDER.
 
-    Reads OPENAI_API_KEY from the environment. In tests, override with
-    FakeEmbeddingAdapter to avoid network calls:
-
-        app.dependency_overrides[get_embedding_client] = lambda: FakeEmbeddingAdapter()
+    Defaults to OpenAIEmbeddingAdapter (requires OPENAI_API_KEY).
+    Set JOBCRAFT_EMBEDDING_PROVIDER=fake to use the deterministic BoW fake
+    adapter — no API key needed, suitable for local dev and demos.
     """
+    if get_settings().embedding_provider == "fake":
+        return FakeEmbeddingAdapter()
     return OpenAIEmbeddingAdapter()
 
 
 def get_vector_store() -> VectorStore:
-    """Build a QdrantVectorStore pointed at the configured qdrant_url.
+    """Build a vector store selected by JOBCRAFT_VECTOR_STORE.
 
-    In tests, override with InMemoryVectorStore to avoid a Qdrant connection:
-
-        app.dependency_overrides[get_vector_store] = lambda: InMemoryVectorStore()
+    Defaults to QdrantVectorStore. Set JOBCRAFT_VECTOR_STORE=memory to use
+    the in-process InMemoryVectorStore — no Qdrant required, suitable for
+    local dev and demos.
     """
+    if get_settings().vector_store == "memory":
+        return InMemoryVectorStore()
     return QdrantVectorStore(url=get_settings().qdrant_url)
 
 
@@ -113,7 +134,7 @@ def get_llm_factory() -> Callable[[AsyncSession], LLMClient]:
 
         app.dependency_overrides[get_llm_factory] = _mock_llm_factory
     """
-    _adapter = AnthropicAdapter()
+    _adapter = _build_llm_adapter()
 
     def _factory(session: AsyncSession) -> LLMClient:
         return LLMClient(session=session, adapter=_adapter)

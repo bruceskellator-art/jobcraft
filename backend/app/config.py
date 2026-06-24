@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import functools
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,6 +24,20 @@ class Settings(BaseSettings):
     qdrant_url: str = Field(default="http://localhost:6333")
     redis_url: str = Field(default="redis://localhost:6379/0")
     cors_origins: list[str] = Field(default=["http://localhost:3000"])
+
+    # Provider selection — lets you run with only a DeepSeek key (no Anthropic/OpenAI/Qdrant).
+    # JOBCRAFT_LLM_PROVIDER=deepseek  → use DeepSeek (needs DEEPSEEK_API_KEY)
+    # JOBCRAFT_LLM_PROVIDER=openai    → use OpenAI  (needs OPENAI_API_KEY)
+    # JOBCRAFT_LLM_PROVIDER=anthropic → use Anthropic (default; needs ANTHROPIC_API_KEY)
+    llm_provider: Literal["anthropic", "openai", "deepseek"] = Field(default="anthropic")
+
+    # JOBCRAFT_EMBEDDING_PROVIDER=fake  → deterministic BoW hashing, no API key needed
+    # JOBCRAFT_EMBEDDING_PROVIDER=openai → real OpenAI embeddings (default)
+    embedding_provider: Literal["openai", "fake"] = Field(default="openai")
+
+    # JOBCRAFT_VECTOR_STORE=memory → in-process store, no Qdrant needed
+    # JOBCRAFT_VECTOR_STORE=qdrant → production Qdrant (default)
+    vector_store: Literal["qdrant", "memory"] = Field(default="qdrant")
 
     # Email sync — set to a Fernet key generated via:
     #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
