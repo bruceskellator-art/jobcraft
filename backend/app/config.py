@@ -3,8 +3,13 @@ from __future__ import annotations
 import functools
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Load .env into os.environ so non-Settings env vars (e.g. DEEPSEEK_API_KEY,
+# ANTHROPIC_API_KEY) are available to adapters that read them via os.environ.
+load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
