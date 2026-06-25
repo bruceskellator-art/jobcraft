@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import logging
+import uuid
+from collections.abc import Callable
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.extractor.service import extract_job
 from app.llm.client import LLMClient
 from app.repositories.job import JobRepository
+from app.repositories.scrape_run import ScrapeRunRepository
 from app.scrapers.base import JobSource
 from app.scrapers.dedupe import content_hash
 from app.scrapers.types import JobFilters, RawJobPosting, ScrapeRunLog
@@ -93,6 +96,70 @@ async def run_scrape(
         )
 
     return all_created, all_logs
+
+
+def _log_to_dict(log: ScrapeRunLog) -> dict:
+    """Serialize a ScrapeRunLog into a JSON-storable dict (ScrapeRunLogView shape)."""
+    return {
+        "source": log.source,
+        "total_listed": log.total_listed,
+        "total_fetched": log.total_fetched,
+        "total_failed": log.total_failed,
+        "total_new": log.total_new,
+        "error": log.error,
+    }
+
+
+async def execute_scrape_run(
+    run_id: uuid.UUID,
+    *,
+    session_factory: async_sessionmaker[AsyncSession],
+    build_sources: Callable[[], list[JobSource]],
+    filters: JobFilters,
+    build_llm: Callable[[AsyncSession], LLMClient] | None = None,
+    extract: bool = False,
+) -> None:
+    """Run a scrape in the background, recording lifecycle + results on the ScrapeRun row.
+
+    Owns its own DB session (the request that enqueued it has already returned).
+    Never raises: any failure is captured and persisted as status='failed' so the
+    UI can surface it. Sources' HTTP clients are always closed.
+    """
+    async with session_factory() as session:
+        repo = ScrapeRunRepository(session)
+        await repo.mark_running(run_id)
+        await session.commit()
+
+        sources: list[JobSource] = []
+        try:
+            sources = build_sources()
+            llm = build_llm(session) if (extract and build_llm is not None) else None
+            created, logs = await run_scrape(
+                session=session,
+                sources=sources,
+                filters=filters,
+                llm=llm,
+                extract=extract,
+            )
+            await session.commit()
+            await repo.mark_finished(
+                run_id,
+                status="succeeded",
+                total_created=len(created),
+                runs=[_log_to_dict(log) for log in logs],
+            )
+            await session.commit()
+        except Exception as exc:
+            logger.exception("execute_scrape_run: run %s failed", run_id)
+            # The run_scrape transaction may be poisoned — reset before writing failure.
+            await session.rollback()
+            await repo.mark_finished(run_id, status="failed", error=str(exc))
+            await session.commit()
+        finally:
+            for src in sources:
+                aclose = getattr(src, "aclose", None)
+                if callable(aclose):
+                    await aclose()
 
 
 # Sentinel returned by _process_one to signal a non-fatal per-item failure.

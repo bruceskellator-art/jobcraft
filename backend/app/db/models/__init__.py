@@ -13,6 +13,7 @@ from app.db.models.llm_call import LlmCall
 from app.db.models.match import Match
 from app.db.models.profile_field import ProfileField
 from app.db.models.prompt_version import PromptVersion
+from app.db.models.scrape_run import ScrapeRun
 from app.db.models.status_event import StatusEvent
 from app.db.models.user import User
 
@@ -30,6 +31,7 @@ __all__ = [
     "Match",
     "ProfileField",
     "PromptVersion",
+    "ScrapeRun",
     "StatusEvent",
     "User",
 ]
