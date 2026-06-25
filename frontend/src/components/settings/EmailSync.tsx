@@ -10,6 +10,13 @@ import {
   syncEmailAccount,
 } from '@/lib/api'
 import { relativeTime } from '@/lib/relativeTime'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 // ---------------------------------------------------------------------------
 // Privacy disclosure — shown prominently at top
@@ -197,14 +204,15 @@ function ConnectForm({ onConnect, isConnecting }: ConnectFormProps) {
           <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
             Provider
           </label>
-          <select
-            className="w-full border border-zinc-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
-            value={provider}
-            onChange={(e) => setProvider(e.target.value as EmailProvider)}
-          >
-            <option value="gmail">Gmail</option>
-            <option value="outlook">Outlook</option>
-          </select>
+          <Select value={provider} onValueChange={(v) => setProvider(v as EmailProvider)}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gmail">Gmail</SelectItem>
+              <SelectItem value="outlook">Outlook</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div>

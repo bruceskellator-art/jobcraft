@@ -1,15 +1,18 @@
 'use client'
 
+import { useState } from 'react'
+import { toast } from 'sonner'
 import type { Artifact, ArtifactScores } from '@/types/artifact'
 import { scoreColor } from '@/lib/scoreColor'
+import { downloadArtifactPdf } from '@/lib/api'
+import { CompanyLogo } from '@/components/common/CompanyLogo'
 
 interface ArtifactRowProps {
   artifact: Artifact
   baselineScores: ArtifactScores | null
   jobTitle: string
   jobCompany: string
-  logoColors: { bg: string; color: string }
-  initials: string
+  onView?: (artifact: Artifact) => void
 }
 
 function avgScore(scores: ArtifactScores): number {
@@ -33,11 +36,12 @@ export function ArtifactRow({
   baselineScores,
   jobTitle,
   jobCompany,
-  logoColors,
-  initials,
+  onView,
 }: ArtifactRowProps) {
+  const [isDownloading, setIsDownloading] = useState(false)
   const scores = artifact.scores
   const isResume = artifact.kind === 'resume'
+  const canExportPdf = isResume && artifact.format === 'json' && Boolean(artifact.template_id)
 
   const delta =
     scores && baselineScores
@@ -51,22 +55,24 @@ export function ArtifactRow({
     return <span className={`num font-semibold ${cls}`}>{formatDelta(delta)}</span>
   }
 
+  async function handleDownload() {
+    if (isDownloading) return
+    setIsDownloading(true)
+    try {
+      await downloadArtifactPdf(artifact.id)
+      toast.success('PDF downloaded.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'PDF export failed.')
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   return (
     <tr className="data-row">
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <div
-            className="logo-avatar"
-            style={{
-              background: logoColors.bg,
-              color: logoColors.color,
-              width: '1.75rem',
-              height: '1.75rem',
-              fontSize: '0.55rem',
-            }}
-          >
-            {initials}
-          </div>
+          <CompanyLogo company={jobCompany || jobTitle} size="sm" />
           <div>
             <div className="font-semibold text-zinc-800 text-sm">{jobTitle}</div>
             <div className="text-xs text-zinc-400">
@@ -82,9 +88,16 @@ export function ArtifactRow({
         </div>
       </td>
       <td className="px-2 py-3">
-        <span className={`skill-tag ${isResume ? 'skill-gen' : 'skill-fe'}`}>
-          {isResume ? 'Résumé' : 'Cover letter'}
-        </span>
+        <div className="flex flex-col gap-0.5">
+          <span className={`skill-tag ${isResume ? 'skill-gen' : 'skill-fe'}`}>
+            {isResume ? 'Résumé' : 'Cover letter'}
+          </span>
+          {artifact.template_id && (
+            <span className="text-[10px] text-zinc-400 border border-zinc-200 rounded px-1 py-0.5 w-fit">
+              {artifact.template_id}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-2 py-3 text-center">
         {scores ? (
@@ -122,7 +135,24 @@ export function ArtifactRow({
       </td>
       <td className="px-2 py-3 text-right">{renderDelta()}</td>
       <td className="px-2 py-3 text-right">
-        <button className="btn btn-ghost text-xs">View →</button>
+        <div className="flex items-center justify-end gap-1.5">
+          {canExportPdf && (
+            <button
+              className="btn btn-ghost text-xs"
+              onClick={() => void handleDownload()}
+              disabled={isDownloading}
+              title="Download PDF"
+            >
+              {isDownloading ? '…' : 'PDF'}
+            </button>
+          )}
+          <button
+            className="btn btn-ghost text-xs"
+            onClick={() => onView?.(artifact)}
+          >
+            View →
+          </button>
+        </div>
       </td>
     </tr>
   )

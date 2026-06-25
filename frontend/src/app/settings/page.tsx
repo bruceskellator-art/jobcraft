@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import type { AutopilotConfig, AnswerBankItem, ProfileField } from '@/types/apply'
+import type { ScrapeProfileConfig } from '@/types/settings'
 import {
   getAutopilot,
   putAutopilot,
@@ -12,11 +13,15 @@ import {
   listAnswers,
   createAnswer,
   approveAnswer,
+  getScrapeProfile,
+  putScrapeProfile,
+  runScrape,
 } from '@/lib/api'
 import { AutopilotForm } from '@/components/settings/AutopilotForm'
 import { AnswerBank } from '@/components/settings/AnswerBank'
 import { ProfileFields } from '@/components/settings/ProfileFields'
 import { EmailSync } from '@/components/settings/EmailSync'
+import { ScrapeProfileForm } from '@/components/settings/ScrapeProfileForm'
 
 const SOURCES = [
   { name: 'LinkedIn', key: 'linkedin', trusted: true },
@@ -33,18 +38,23 @@ export default function SettingsPage() {
   const [answers, setAnswers] = useState<AnswerBankItem[]>([])
 
   const [isSavingAutopilot, setIsSavingAutopilot] = useState(false)
+  const [scrapeProfile, setScrapeProfile] = useState<ScrapeProfileConfig | null>(null)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
 
   const loadAll = useCallback((signal: AbortSignal) => {
     Promise.all([
       getAutopilot(signal),
       getProfileFields(signal),
       listAnswers(signal),
+      getScrapeProfile(signal),
     ])
-      .then(([ap, fields, ans]) => {
+      .then(([ap, fields, ans, profile]) => {
         if (signal.aborted) return
         setAutopilot(ap)
         setProfileFields(fields)
         setAnswers(ans)
+        setScrapeProfile(profile)
         setIsLoading(false)
       })
       .catch((err: unknown) => {
@@ -59,6 +69,33 @@ export default function SettingsPage() {
     loadAll(controller.signal)
     return () => controller.abort()
   }, [loadAll])
+
+  async function handleSaveProfile(config: ScrapeProfileConfig) {
+    if (isSavingProfile) return
+    setIsSavingProfile(true)
+    try {
+      const updated = await putScrapeProfile(config)
+      setScrapeProfile(updated)
+      toast.success('Scrape profile saved.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save scrape profile.')
+      throw err
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  async function handleRunScrape(config: ScrapeProfileConfig) {
+    setIsRunning(true)
+    try {
+      return await runScrape(config)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Scrape failed.')
+      throw err
+    } finally {
+      setIsRunning(false)
+    }
+  }
 
   async function handleSaveAutopilot(config: AutopilotConfig) {
     if (isSavingAutopilot) return
@@ -131,6 +168,20 @@ export default function SettingsPage() {
 
         {!isLoading && !loadError && (
           <>
+            {/* Scrape Profile */}
+            <section className="bg-white border border-zinc-200 rounded-xl p-4">
+              <h2 className="text-sm font-semibold mb-3">Scrape profile</h2>
+              {scrapeProfile && (
+                <ScrapeProfileForm
+                  initial={scrapeProfile}
+                  onSave={handleSaveProfile}
+                  onRun={handleRunScrape}
+                  isSaving={isSavingProfile}
+                  isRunning={isRunning}
+                />
+              )}
+            </section>
+
             {/* Sources & Autopilot */}
             <section className="bg-white border border-zinc-200 rounded-xl p-4 space-y-4">
               <h2 className="text-sm font-semibold">Sources &amp; Autopilot</h2>

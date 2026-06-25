@@ -96,12 +96,19 @@ class GreenhouseSource:
             resp.raise_for_status()
             data = resp.json()
         except Exception as exc:
-            logger.error("Greenhouse list_jobs failed for %s: %s", self._board_token, exc)
+            logger.error(
+                "Greenhouse list_jobs failed for board=%r: %s — "
+                "check that the board token is a company identifier like 'anthropic', not a job title",
+                self._board_token, exc,
+            )
             return
 
         jobs = data.get("jobs", [])
         cutoff = _cutoff_dt(filters.posted_within_days, now=now)
+        logger.info("Greenhouse board=%r: API returned %d jobs", self._board_token, len(jobs))
 
+        yielded = 0
+        filtered = 0
         for raw in jobs:
             try:
                 posting = _parse_posting(raw, self._board_token)
@@ -110,9 +117,16 @@ class GreenhouseSource:
                 continue
 
             if not _passes_filters(posting, filters, raw, cutoff):
+                filtered += 1
                 continue
 
+            yielded += 1
             yield posting
+
+        logger.info(
+            "Greenhouse board=%r done: yielded=%d, filtered=%d",
+            self._board_token, yielded, filtered,
+        )
 
     async def fetch_job(self, source_id: str) -> RawJobPosting:
         url = f"{_BASE_URL}/{self._board_token}/jobs/{source_id}"

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+@page { size: A4; margin: 1.4cm 1.8cm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Times New Roman', Times, Georgia, serif;
+  font-size: 9.5pt;
+  color: #000;
+  line-height: 1.4;
+}
+a { color: inherit; text-decoration: none; }
+
+.header { text-align: center; margin-bottom: 6pt; }
+.header h1 { font-size: 18pt; font-weight: bold; margin-bottom: 3pt; }
+.contact { font-size: 8.5pt; }
+.contact span + span::before { content: " • "; }
+
+section { margin-top: 8pt; }
+.section-title-wrap {
+  text-align: center;
+  margin-bottom: 5pt;
+}
+.section-title-wrap hr { border: none; border-top: 1px solid #000; margin: 0; }
+.section-title {
+  display: inline-block;
+  font-size: 9pt; font-weight: bold; text-transform: uppercase;
+  letter-spacing: 1pt; padding: 2pt 8pt;
+}
+
+.entry { margin-bottom: 6pt; }
+.entry-top { display: flex; justify-content: space-between; align-items: baseline; }
+.entry-company { font-weight: bold; }
+.entry-location { font-size: 8.5pt; font-style: italic; }
+.entry-mid { display: flex; justify-content: space-between; align-items: baseline; }
+.entry-title { font-style: italic; font-size: 9pt; }
+.entry-date { font-size: 8.5pt; }
+.entry ul { list-style: none; padding-left: 0; margin-top: 2pt; }
+.entry li { font-size: 9pt; padding-left: 1em; text-indent: -1em; margin-bottom: 1pt; }
+.entry li::before { content: "• "; }
+
+.edu-entry { margin-bottom: 5pt; }
+.edu-top { display: flex; justify-content: space-between; }
+.edu-inst { font-weight: bold; }
+.edu-year { font-size: 8.5pt; }
+.edu-degree { font-style: italic; font-size: 9pt; }
+.edu-detail { font-size: 8.5pt; }
+
+.skill-row { font-size: 9pt; margin-bottom: 2pt; text-align: left; }
+.skill-label { font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>{{ data.name }}</h1>
+  <div class="contact">
+    {% if data.location %}<span>{{ data.location }}</span>{% endif %}
+    {% if data.email %}<span>{{ data.email }}</span>{% endif %}
+    {% if data.phone %}<span>{{ data.phone }}</span>{% endif %}
+    {% if data.linkedin %}<span>{{ data.linkedin }}</span>{% endif %}
+    {% if data.github %}<span>{{ data.github }}</span>{% endif %}
+  </div>
+</div>
+
+{% macro section_header(title) %}
+<div class="section-title-wrap">
+  <hr>
+  <div class="section-title">{{ title }}</div>
+  <hr>
+</div>
+{% endmacro %}
+
+{% if data.summary %}
+<section>
+  {{ section_header("Summary") }}
+  <p style="font-size:9pt; line-height:1.5; text-align:justify;">{{ data.summary }}</p>
+</section>
+{% endif %}
+
+{% if data.experience %}
+<section>
+  {{ section_header("Experience") }}
+  {% for exp in data.experience %}
+  <div class="entry">
+    <div class="entry-top">
+      <span class="entry-company">{{ exp.company }}</span>
+      <span class="entry-location">{% if exp.location %}{{ exp.location }}{% endif %}</span>
+    </div>
+    <div class="entry-mid">
+      <span class="entry-title">{{ exp.title }}</span>
+      <span class="entry-date">{{ exp.start_date }} — {{ exp.end_date }}</span>
+    </div>
+    <ul>
+      {% for bullet in exp.bullets %}
+      <li>{{ bullet }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if data.projects %}
+<section>
+  {{ section_header("Projects") }}
+  {% for proj in data.projects %}
+  <div class="entry">
+    <div class="entry-top">
+      <span class="entry-company">{{ proj.name }}</span>
+      {% if proj.start_date %}<span class="entry-date">{{ proj.start_date }}{% if proj.end_date %} — {{ proj.end_date }}{% endif %}</span>{% endif %}
+    </div>
+    {% if proj.role %}<div class="entry-title">{{ proj.role }}{% if proj.organization %} — {{ proj.organization }}{% endif %}</div>{% endif %}
+    <ul>{% for bullet in proj.bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if data.education %}
+<section>
+  {{ section_header("Education") }}
+  {% for edu in data.education %}
+  <div class="edu-entry">
+    <div class="edu-top">
+      <span class="edu-inst">{{ edu.institution }}</span>
+      <span class="edu-year">{{ edu.year }}</span>
+    </div>
+    <div class="edu-degree">{{ edu.degree }}{% if edu.minor %}, Minor in {{ edu.minor }}{% endif %}</div>
+    {% if edu.honors %}<div class="edu-detail">{{ edu.honors }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if data.skills %}
+<section>
+  {{ section_header("Skills") }}
+  {% for cat in data.skills %}
+  <div class="skill-row"><span class="skill-label">{{ cat.category }}:</span> {{ cat.skills | join(', ') }}</div>
+  {% endfor %}
+</section>
+{% endif %}
+
+</body>
+</html>

@@ -41,6 +41,7 @@ class ArtifactRead(BaseModel):
     is_baseline: bool
     scores: dict | None
     prompt_version_id: uuid.UUID | None
+    template_id: str | None
     created_at: datetime | None
 
 
@@ -49,3 +50,4 @@ class GenerateRequest(BaseModel):
 
     kind: Literal["resume", "cover_letter"]
     style: StyleConfigIn = Field(default_factory=StyleConfigIn)
+    template_id: str = "standard"

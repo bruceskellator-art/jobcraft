@@ -1,3 +1,5 @@
+import { CompanyLogo } from '@/components/common/CompanyLogo'
+
 type SkillVariant = 'skill-ml' | 'skill-fe' | 'skill-be' | 'skill-infra' | 'skill-gen'
 type ChipVariant = 'chip-high' | 'chip-mid' | 'chip-low'
 type BadgeVariant =
@@ -16,9 +18,7 @@ interface SkillTag {
 interface ActivityRow {
   id: string
   time: string
-  companyInitials: string
-  companyBg: string
-  companyColor: string
+  company: string
   description: string
   jobTitle: string
   note?: string
@@ -35,9 +35,7 @@ const ACTIVITY_ROWS: ActivityRow[] = [
   {
     id: 'act-1',
     time: '09:41',
-    companyInitials: 'ST',
-    companyBg: '#ede9fe',
-    companyColor: '#5b21b6',
+    company: 'Stripe',
     description: 'Auto-submitted',
     jobTitle: 'Forward Deployed Engineer',
     skills: [
@@ -53,9 +51,7 @@ const ACTIVITY_ROWS: ActivityRow[] = [
   {
     id: 'act-2',
     time: '09:38',
-    companyInitials: 'GT',
-    companyBg: '#e0e7ff',
-    companyColor: '#4338ca',
+    company: 'Greythorn',
     description: 'Queued for review',
     jobTitle: 'AI Engineer (LLM Platform)',
     note: '(unknown screening Q)',
@@ -73,9 +69,7 @@ const ACTIVITY_ROWS: ActivityRow[] = [
   {
     id: 'act-3',
     time: '09:30',
-    companyInitials: 'BD',
-    companyBg: '#fce7f3',
-    companyColor: '#be185d',
+    company: 'Brainbase',
     description: 'Generated resume + cover letter',
     jobTitle: 'AI Solutions Engineer',
     skills: [
@@ -91,9 +85,7 @@ const ACTIVITY_ROWS: ActivityRow[] = [
   {
     id: 'act-4',
     time: '09:12',
-    companyInitials: 'SH',
-    companyBg: '#ffedd5',
-    companyColor: '#c2410c',
+    company: 'Shopee',
     description: 'Blocked',
     jobTitle: 'Senior Backend Engineer',
     note: '· Workday CAPTCHA',
@@ -123,18 +115,7 @@ export function RecentActivity() {
                 {row.time}
               </td>
               <td className="px-4 py-2.5 w-10">
-                <div
-                  className="logo-avatar"
-                  style={{
-                    background: row.companyBg,
-                    color: row.companyColor,
-                    width: '1.75rem',
-                    height: '1.75rem',
-                    fontSize: '0.55rem',
-                  }}
-                >
-                  {row.companyInitials}
-                </div>
+                <CompanyLogo company={row.company} size="sm" />
               </td>
               <td className="px-2 py-2.5">
                 <span className="text-zinc-700">

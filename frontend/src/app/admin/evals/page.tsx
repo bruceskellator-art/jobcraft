@@ -7,6 +7,13 @@ import type { EvalRun } from '@/types/eval'
 import { listEvalRuns, runEvalSuite } from '@/lib/api'
 import { SuiteCard } from '@/components/admin/SuiteCard'
 import { EvalRunRow } from '@/components/admin/EvalRunRow'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const KNOWN_SUITES = ['resume_quality_v1', 'extraction_accuracy_v1', 'match_consistency_v1']
 
@@ -217,17 +224,18 @@ export default function AdminEvalsPage() {
             <section className="bg-white border border-zinc-200 rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">Run a suite</h2>
               <div className="flex items-center gap-3">
-                <select
-                  className="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  value={selectedSuite}
-                  onChange={(e) => setSelectedSuite(e.target.value)}
-                >
-                  {allSuiteNames.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
+                <Select value={selectedSuite} onValueChange={(v) => { if (v !== null) setSelectedSuite(v) }}>
+                  <SelectTrigger className="text-sm text-zinc-700">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allSuiteNames.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <button
                   className="btn btn-primary"
                   onClick={() => void handleRunSuite()}

@@ -26,6 +26,8 @@ from app.llm.client import LLMClient
 from app.scrapers.base import JobSource
 from app.scrapers.greenhouse import GreenhouseSource
 from app.scrapers.lever import LeverSource
+from app.scrapers.linkedin import LinkedInSource
+from app.scrapers.mycareersfuture import MyCareersFutureSource
 from app.vectorstore.base import VectorStore
 from app.vectorstore.memory import InMemoryVectorStore
 from app.vectorstore.qdrant_adapter import QdrantVectorStore
@@ -223,11 +225,16 @@ def get_email_provider(account: EmailAccount) -> EmailProvider:
     )
 
 
-def get_source_factory() -> Callable[[list[str], list[str]], list[JobSource]]:
-    """Return a factory that builds JobSource instances from board/company lists.
+def get_source_factory() -> Callable[[list[str], list[str], list[str], list[str]], list[JobSource]]:
+    """Return a factory that builds JobSource instances from board/company/keyword lists.
 
     The factory signature is:
-        (greenhouse_boards: list[str], lever_companies: list[str]) -> list[JobSource]
+        (
+            greenhouse_boards: list[str],
+            lever_companies: list[str],
+            mcf_keywords: list[str],
+            linkedin_keywords: list[str],
+        ) -> list[JobSource]
 
     Each adapter created here owns its own httpx.AsyncClient.  The caller is
     responsible for calling ``aclose()`` on every source when done — or using
@@ -243,12 +250,18 @@ def get_source_factory() -> Callable[[list[str], list[str]], list[JobSource]]:
     def _build(
         greenhouse_boards: list[str],
         lever_companies: list[str],
+        mcf_keywords: list[str] | None = None,
+        linkedin_keywords: list[str] | None = None,
     ) -> list[JobSource]:
         sources: list[JobSource] = []
         for board in greenhouse_boards:
             sources.append(GreenhouseSource(board_token=board))  # type: ignore[arg-type]
         for company in lever_companies:
             sources.append(LeverSource(company=company))  # type: ignore[arg-type]
+        if mcf_keywords:
+            sources.append(MyCareersFutureSource(keywords=mcf_keywords))  # type: ignore[arg-type]
+        if linkedin_keywords:
+            sources.append(LinkedInSource(keywords=linkedin_keywords))  # type: ignore[arg-type]
         return sources
 
     return _build

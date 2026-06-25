@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T", bound=BaseModel)
 
-_DEFAULT_MAX_TOKENS = 1024
+_DEFAULT_MAX_TOKENS = 4096
 _DEFAULT_SYSTEM: str | None = None
 _MAX_ALLOWED_TOKENS = 8192
 

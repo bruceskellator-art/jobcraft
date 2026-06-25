@@ -1,14 +1,7 @@
 import type { ApplyQueueItem, MappedField } from '@/types/apply'
 import { scoreColor } from '@/lib/scoreColor'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
-
-function getInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
+import { CompanyLogo } from '@/components/common/CompanyLogo'
 
 function sourceLabel(source: string): string {
   const MAP: Record<string, string> = {
@@ -34,7 +27,6 @@ interface FieldMapReviewProps {
 export function FieldMapReview({ item, onApprove, onSkip, isApproving }: FieldMapReviewProps) {
   const { job, field_map, application } = item
   const confidence = field_map?.overall_confidence ?? application.apply_confidence
-  const initials = getInitials(job.company)
 
   const titleSkills = job.title
     .split(/[\s,/&]+/)
@@ -48,19 +40,7 @@ export function FieldMapReview({ item, onApprove, onSkip, isApproving }: FieldMa
     <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden h-full flex flex-col">
       {/* Header */}
       <div className="px-4 py-3 border-b border-zinc-100 flex items-start gap-3">
-        <div
-          className="logo-avatar"
-          style={{
-            background: '#e0e7ff',
-            color: '#4338ca',
-            width: '2.25rem',
-            height: '2.25rem',
-            fontSize: '0.625rem',
-            flexShrink: 0,
-          }}
-        >
-          {initials}
-        </div>
+        <CompanyLogo company={job.company} size="md" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold text-zinc-900">{job.company}</span>

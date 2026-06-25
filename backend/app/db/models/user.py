@@ -17,3 +17,4 @@ class User(Base):
     created_at: Mapped[sa.DateTime | None] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.func.now()
     )
+    scrape_profile: Mapped[dict | None] = mapped_column(sa.JSON(), nullable=True)

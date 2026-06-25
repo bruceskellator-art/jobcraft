@@ -48,6 +48,8 @@ class ScrapeRequest(BaseModel):
     filters: JobFilters = JobFilters()
     greenhouse_boards: list[str] = []
     lever_companies: list[str] = []
+    mcf_keywords: list[str] = []
+    linkedin_keywords: list[str] = []
     extract: bool = False
 
 
@@ -59,6 +61,7 @@ class ScrapeRunLogView(BaseModel):
     total_fetched: int
     total_failed: int
     total_new: int
+    error: str | None = None
 
 
 class ScrapeResponse(BaseModel):

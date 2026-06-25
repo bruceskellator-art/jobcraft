@@ -53,6 +53,7 @@ async def run_scrape(
         total_failed = 0
         total_new = 0
 
+        source_error: str | None = None
         try:
             async for raw in source.list_jobs(filters):  # type: ignore[attr-defined]
                 total_listed += 1
@@ -71,10 +72,15 @@ async def run_scrape(
                     if posting is not None:
                         total_new += 1
                         all_created.append(posting)
-        except Exception:
+        except Exception as exc:
             logger.exception("run_scrape: source %s raised unexpectedly", source.name)
             total_failed += 1
+            source_error = str(exc)
 
+        logger.info(
+            "run_scrape: source=%s listed=%d new=%d failed=%d",
+            source.name, total_listed, total_new, total_failed,
+        )
         all_logs.append(
             ScrapeRunLog(
                 source=source.name,
@@ -82,6 +88,7 @@ async def run_scrape(
                 total_fetched=total_fetched,
                 total_failed=total_failed,
                 total_new=total_new,
+                error=source_error,
             )
         )
 

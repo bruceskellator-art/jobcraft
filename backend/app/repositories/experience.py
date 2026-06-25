@@ -23,11 +23,28 @@ class ExperienceRepository:
         self._session = session
 
     async def list_by_user(self, user_id: uuid.UUID) -> list[ExperienceItem]:
-        """Return all experience items belonging to user_id."""
+        """Return all experience items belonging to user_id, sorted by sort_order then created_at."""
         result = await self._session.execute(
-            select(ExperienceItem).where(ExperienceItem.user_id == user_id)
+            select(ExperienceItem)
+            .where(ExperienceItem.user_id == user_id)
+            .order_by(
+                ExperienceItem.sort_order.asc().nulls_last(),
+                ExperienceItem.created_at.asc(),
+            )
         )
         return list(result.scalars().all())
+
+    async def reorder_kind(
+        self, user_id: uuid.UUID, kind: str, ordered_ids: list[uuid.UUID]
+    ) -> None:
+        """Assign sort_order values to items of a given kind based on ordered_ids position."""
+        for position, item_id in enumerate(ordered_ids):
+            item = await self._session.get(ExperienceItem, item_id)
+            if item is None or item.user_id != user_id or item.kind != kind:
+                continue
+            item.sort_order = position
+            self._session.add(item)
+        await self._session.flush()
 
     async def get(self, item_id: uuid.UUID) -> ExperienceItem | None:
         """Return a single item by primary key, or None if not found."""

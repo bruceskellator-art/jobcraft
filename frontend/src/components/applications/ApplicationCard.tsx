@@ -3,6 +3,13 @@
 import type { JobPosting } from '@/types/job'
 import { scoreColor } from '@/lib/scoreColor'
 import { relativeTime } from '@/lib/relativeTime'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 export interface ApplicationCardData {
   id: string
@@ -73,9 +80,9 @@ export function ApplicationCard({ application, job, onStatusChange }: Applicatio
     e.dataTransfer.setData('application_id', application.id)
   }
 
-  function handleStatusSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    e.stopPropagation()
-    onStatusChange(application.id, e.target.value)
+  function handleStatusValueChange(value: string | null) {
+    if (value === null) return
+    onStatusChange(application.id, value)
   }
 
   return (
@@ -119,19 +126,19 @@ export function ApplicationCard({ application, job, onStatusChange }: Applicatio
         </div>
       )}
 
-      <div className="pt-0.5">
-        <select
-          className="text-xs text-zinc-500 bg-transparent border border-zinc-200 rounded px-1.5 py-0.5 w-full focus:outline-none focus:ring-1 focus:ring-indigo-400"
-          value={application.status}
-          onChange={handleStatusSelectChange}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+      <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+        <Select value={application.status} onValueChange={handleStatusValueChange}>
+          <SelectTrigger size="sm" className="w-full text-xs text-zinc-500">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   )

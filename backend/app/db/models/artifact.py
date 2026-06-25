@@ -30,11 +30,14 @@ class Artifact(Base):
     format: Mapped[str] = mapped_column(
         sa.Text,
         sa.CheckConstraint(
-            "format IN ('markdown', 'pdf', 'html')", name="artifacts_format_check"
+            "format IN ('markdown', 'pdf', 'html', 'json')", name="artifacts_format_check"
         ),
         nullable=False,
     )
     content: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    # Which HTML/CSS template was used for resume generation. NULL for cover
+    # letters and baseline uploads.
+    template_id: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     is_baseline: Mapped[bool] = mapped_column(sa.Boolean, server_default=sa.false())
     scores: Mapped[dict | None] = mapped_column(
         JSONB().with_variant(sa.JSON(), "sqlite"), nullable=True

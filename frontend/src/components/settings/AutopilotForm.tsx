@@ -2,6 +2,13 @@
 
 import { useState } from 'react'
 import type { AutopilotConfig, AutopilotMode } from '@/types/apply'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface AutopilotFormProps {
   initial: AutopilotConfig
@@ -35,15 +42,16 @@ export function AutopilotForm({ initial, onSave, isSaving }: AutopilotFormProps)
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-zinc-600 mb-1">Autopilot mode</label>
-          <select
-            className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            value={mode}
-            onChange={e => setMode(e.target.value as AutopilotMode)}
-          >
-            <option value="off">Off</option>
-            <option value="selective">Selective</option>
-            <option value="full">Full</option>
-          </select>
+          <Select value={mode} onValueChange={(v) => setMode(v as AutopilotMode)}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="off">Off</SelectItem>
+              <SelectItem value="selective">Selective</SelectItem>
+              <SelectItem value="full">Full</SelectItem>
+            </SelectContent>
+          </Select>
           <p className="text-xs text-zinc-400 mt-1">
             {mode === 'off' && 'All applications require manual approval.'}
             {mode === 'selective' && 'Auto-submit only from trusted sources.'}

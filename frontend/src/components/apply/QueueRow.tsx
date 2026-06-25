@@ -2,16 +2,9 @@ import type { ApplyQueueItem, ApplicationStatus } from '@/types/apply'
 import { scoreColor } from '@/lib/scoreColor'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
 import { Checkbox } from '@/components/ui/checkbox'
+import { CompanyLogo } from '@/components/common/CompanyLogo'
 
 const MAX_SKILLS = 3
-
-function getInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
 
 function sourceLabel(source: string): string {
   const MAP: Record<string, string> = {
@@ -53,7 +46,6 @@ export function QueueRow({ item, isSelected, isChecked, onSelect, onCheck }: Que
   const { application, field_map, job } = item
   const status = application.status
   const confidence = field_map?.overall_confidence ?? application.apply_confidence
-  const initials = getInitials(job.company)
 
   // Derive skill tags from job title words as a best-effort
   const titleSkills = job.title
@@ -76,18 +68,7 @@ export function QueueRow({ item, isSelected, isChecked, onSelect, onCheck }: Que
 
       <td className="px-3 py-3">
         <div className="flex items-center gap-2">
-          <div
-            className="logo-avatar"
-            style={{
-              background: '#e0e7ff',
-              color: '#4338ca',
-              width: '1.75rem',
-              height: '1.75rem',
-              fontSize: '0.55rem',
-            }}
-          >
-            {initials}
-          </div>
+          <CompanyLogo company={job.company} size="sm" />
           <div>
             <p className="text-sm font-semibold text-zinc-900 leading-tight">{job.title}</p>
             <p className="text-xs text-zinc-500 mt-0.5">{job.company}</p>

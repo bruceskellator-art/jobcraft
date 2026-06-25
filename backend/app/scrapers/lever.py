@@ -96,11 +96,18 @@ class LeverSource:
             resp.raise_for_status()
             postings = resp.json()
         except Exception as exc:
-            logger.error("Lever list_jobs failed for %s: %s", self._company, exc)
+            logger.error(
+                "Lever list_jobs failed for company=%r: %s — "
+                "check that the company slug is a valid identifier like 'openai', not a job title",
+                self._company, exc,
+            )
             return
 
         cutoff_ts = _cutoff_ts(filters.posted_within_days, now=now)
+        logger.info("Lever company=%r: API returned %d postings", self._company, len(postings))
 
+        yielded = 0
+        filtered = 0
         for raw in postings:
             try:
                 posting = _parse_posting(raw, self._company)
@@ -109,9 +116,16 @@ class LeverSource:
                 continue
 
             if not _passes_filters(posting, filters, raw, cutoff_ts):
+                filtered += 1
                 continue
 
+            yielded += 1
             yield posting
+
+        logger.info(
+            "Lever company=%r done: yielded=%d, filtered=%d",
+            self._company, yielded, filtered,
+        )
 
     async def fetch_job(self, source_id: str) -> RawJobPosting:
         url = f"{_BASE_URL}/{self._company}/{source_id}"

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>JobCraft — Revamp Mock (Option B · editorial minimalism)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<!-- Phosphor icons (Bold + Fill) per minimalist-ui iconography directive -->
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css" />
+<style>
+  :root{
+    /* warm monochrome canvas */
+    --bg:#F7F6F3; --surface:#FFFFFF; --surface-2:#F9F9F8;
+    --border:#EAEAEA; --border-soft:rgba(0,0,0,.06);
+    --text:#1D1D1B; --text-2:#787774;
+    --ink:#111111; --ink-hover:#333333;
+    /* scarce interactive accent (links, active nav, focus) */
+    --accent:#4f46e5;
+    /* muted pastels (minimalist-ui spot palette) */
+    --red-bg:#FDEBEC; --red-fg:#9F2F2D;
+    --blue-bg:#E1F3FE; --blue-fg:#1F6C9F;
+    --green-bg:#EDF3EC; --green-fg:#346538;
+    --yellow-bg:#FBF3DB; --yellow-fg:#956400;
+    --violet-bg:#F3EDFB; --violet-fg:#6B3FA0;
+    /* ultra-diffuse shadow (<0.05) */
+    --shadow:0 1px 2px rgba(0,0,0,.03);
+    --shadow-hover:0 2px 8px rgba(0,0,0,.045);
+  }
+  *{ box-sizing:border-box; }
+  body{ font-family:'Geist',system-ui,-apple-system,sans-serif; background:var(--bg); color:var(--text); margin:0; -webkit-font-smoothing:antialiased; }
+  .mono{ font-family:'Geist Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+  /* editorial serif — reserved for page titles only (extreme typographic contrast) */
+  .serif{ font-family:'Instrument Serif',Georgia,serif; font-weight:400; letter-spacing:-0.02em; line-height:1.1; }
+  h1.serif{ font-size:1.5rem; } /* 24px */
+
+  i[class^="ph"]{ font-size:1.05rem; line-height:1; }
+
+  /* ---- nav ---- */
+  .nav-link{ display:flex; align-items:center; gap:.65rem; padding:.5rem .7rem; border-radius:8px;
+    font-size:.875rem; font-weight:500; color:var(--text-2); cursor:pointer; position:relative; min-height:40px;
+    transition:background .15s, color .15s; }
+  .nav-link:hover{ background:#EFEDE8; color:var(--text); }
+  .nav-link.active{ background:#EFEDE8; color:var(--text); font-weight:600; }
+  .nav-link.active::before{ content:''; position:absolute; left:0; top:24%; bottom:24%; width:2px; border-radius:0 2px 2px 0; background:var(--accent); }
+
+  /* ---- chips / fit score (muted pastels, mono) ---- */
+  .chip{ display:inline-flex; align-items:center; gap:.3rem; min-width:3rem; justify-content:center;
+    padding:.1rem .45rem; border-radius:6px; font-family:'Geist Mono',monospace; font-size:.75rem; font-weight:600; border:1px solid transparent; }
+  .chip-high{ background:var(--green-bg); color:var(--green-fg); }
+  .chip-mid{ background:var(--yellow-bg); color:var(--yellow-fg); }
+  .chip-low{ background:var(--red-bg); color:var(--red-fg); }
+  .chip-none{ background:#F1F0EC; color:#9a978f; }
+
+  /* ---- status badge (small pills allowed for tags/status) ---- */
+  .badge{ display:inline-flex; align-items:center; gap:.4rem; padding:.12rem .5rem; border-radius:9999px;
+    font-size:.6875rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+  .badge .dot{ width:.42rem; height:.42rem; border-radius:9999px; flex:none; }
+  .badge-queued{ background:#F1F0EC; color:#787774; } .badge-queued .dot{ background:#a8a29e; }
+  .badge-filling{ background:var(--blue-bg); color:var(--blue-fg); } .badge-filling .dot{ background:#1F6C9F; }
+  .badge-review{ background:var(--yellow-bg); color:var(--yellow-fg); } .badge-review .dot{ background:#956400; }
+  .badge-done{ background:var(--green-bg); color:var(--green-fg); } .badge-done .dot{ background:#346538; }
+  .badge-failed{ background:var(--red-bg); color:var(--red-fg); } .badge-failed .dot{ background:#9F2F2D; }
+  .badge-running{ background:var(--violet-bg); color:var(--violet-fg); } .badge-running .dot{ background:#6B3FA0; animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
+
+  /* ---- buttons: ink CTA, flat, radius 6px, no shadow ---- */
+  .btn{ display:inline-flex; align-items:center; gap:.4rem; padding:.45rem .8rem; border-radius:6px;
+    font-size:.8125rem; font-weight:600; cursor:pointer; border:1px solid transparent; transition:background .15s, transform .08s, border-color .15s; }
+  .btn:active{ transform:scale(.98); }
+  .btn-primary{ background:var(--ink); color:#fff; }
+  .btn-primary:hover{ background:var(--ink-hover); }
+  .btn-ghost{ background:var(--surface); color:var(--text); border-color:var(--border); }
+  .btn-ghost:hover{ background:var(--surface-2); }
+
+  /* ---- card: 1px border, crisp radius, ultra-diffuse shadow ---- */
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow); }
+  .card-link{ cursor:pointer; transition:box-shadow .2s, transform .2s; }
+  .card-link:hover{ box-shadow:var(--shadow-hover); transform:translateY(-1px); }
+
+  .data-row{ transition:background .15s; }
+  .data-row:hover{ background:var(--surface-2); }
+
+  .source-pill{ display:inline-flex; align-items:center; padding:.08rem .4rem; border-radius:4px; font-size:.625rem; font-weight:600;
+    letter-spacing:.05em; text-transform:uppercase; font-family:'Geist Mono',monospace; background:#F1F0EC; color:#787774; border:1px solid var(--border); }
+
+  /* skill tags — muted pastel, pill ok (small) */
+  .tag{ display:inline-flex; align-items:center; padding:.08rem .45rem; border-radius:9999px; font-size:.6875rem; font-weight:500; white-space:nowrap; }
+  .tag-ml{ background:var(--violet-bg); color:var(--violet-fg); }
+  .tag-fe{ background:var(--blue-bg); color:var(--blue-fg); }
+  .tag-be{ background:var(--green-bg); color:var(--green-fg); }
+  .tag-infra{ background:var(--yellow-bg); color:var(--yellow-fg); }
+  .tag-gen{ background:#F1F0EC; color:#787774; }
+
+  /* company logo with initials fallback */
+  .logo{ width:2.25rem; height:2.25rem; border-radius:8px; flex:none; display:grid; place-items:center; overflow:hidden;
+    font-family:'Geist Mono',monospace; font-size:.625rem; font-weight:600; letter-spacing:.04em; color:var(--text-2);
+    background:var(--surface-2); border:1px solid var(--border); }
+  .logo img{ width:100%; height:100%; object-fit:contain; }
+  .logo.sm{ width:1.75rem; height:1.75rem; font-size:.55rem; border-radius:6px; }
+
+  /* custom select (shadcn-style, editorial) */
+  .sel{ position:relative; }
+  .sel-trigger{ display:inline-flex; align-items:center; justify-content:space-between; gap:.5rem; min-width:9rem;
+    padding:.45rem .65rem; border-radius:6px; border:1px solid var(--border); background:var(--surface); font-size:.8125rem; font-weight:500; color:var(--text); cursor:pointer; }
+  .sel-trigger:hover{ background:var(--surface-2); }
+  .sel-trigger i{ font-size:.85rem; color:#a8a29e; transition:transform .15s; }
+  .sel.open .sel-trigger{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,70,229,.12); }
+  .sel.open .sel-trigger i{ transform:rotate(180deg); }
+  .sel-pop{ position:absolute; top:calc(100% + 4px); left:0; min-width:100%; background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.08); padding:.25rem; z-index:40; display:none; }
+  .sel.open .sel-pop{ display:block; animation:pop .14s cubic-bezier(.16,1,.3,1); }
+  @keyframes pop{ from{ opacity:0; transform:translateY(-4px) } to{ opacity:1; transform:none } }
+  .sel-item{ display:flex; align-items:center; gap:.5rem; padding:.35rem .5rem; border-radius:5px; font-size:.8125rem; color:var(--text); cursor:pointer; white-space:nowrap; }
+  .sel-item:hover{ background:#EFEDE8; }
+  .sel-item i{ font-size:.85rem; opacity:0; color:var(--accent); }
+  .sel-item.on i{ opacity:1; } .sel-item.on{ font-weight:600; }
+
+  /* progress */
+  .progress{ height:5px; border-radius:9999px; background:#EAE8E3; overflow:hidden; }
+  .progress > span{ display:block; height:100%; border-radius:9999px; background:var(--ink); transition:width .6s cubic-bezier(.16,1,.3,1); }
+  .progress.accent > span{ background:var(--accent); }
+  .progress.done > span{ background:var(--green-fg); }
+
+  .tab{ padding:.5rem .25rem; font-size:.8125rem; font-weight:600; color:var(--text-2); border-bottom:2px solid transparent; cursor:pointer; }
+  .tab.active{ color:var(--text); border-color:var(--ink); }
+
+  /* note callout (replaces emoji dev markers; low-jargon) */
+  .note{ font-size:.7rem; color:var(--text-2); border-left:2px solid var(--border); padding-left:.6rem; }
+  .note b{ color:var(--text); font-weight:600; }
+
+  /* loading skeleton (dashboard skill: design loading states) */
+  .sk{ background:linear-gradient(90deg,#EFEDE8 25%,#F4F2EE 37%,#EFEDE8 63%); background-size:400% 100%; animation:sheen 1.4s ease infinite; border-radius:6px; }
+  @keyframes sheen{ 0%{ background-position:100% 0 } 100%{ background-position:0 0 } }
+
+  .empty{ display:grid; place-items:center; gap:.4rem; color:#a8a29e; font-size:.8125rem; text-align:center; }
+
+  kbd{ font-family:'Geist Mono',monospace; font-size:.65rem; background:var(--surface-2); border:1px solid var(--border); border-radius:4px; padding:.05rem .3rem; color:var(--text-2); }
+
+  .view{ display:none; } .view.active{ display:block; }
+
+  /* focus visibility (WCAG / dashboard skill) */
+  a:focus-visible,button:focus-visible,[tabindex]:focus-visible,.nav-link:focus-visible,.sel-trigger:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  /* scroll-entry motion (minimalist-ui spec) */
+  .reveal{ opacity:0; transform:translateY(12px); }
+  .reveal.in{ opacity:1; transform:none; transition:opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1); }
+  @media (prefers-reduced-motion:reduce){ .reveal{ opacity:1; transform:none; } .badge-running .dot{ animation:none; } .sk{ animation:none; } }
+
+  .scrim{ position:fixed; inset:0; background:rgba(29,29,27,.32); display:none; place-items:center; z-index:50; backdrop-filter:blur(2px); }
+  .scrim.open{ display:grid; }
+  header.bar{ height:56px; background:rgba(247,246,243,.8); backdrop-filter:saturate(180%) blur(8px); border-bottom:1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<div class="flex min-h-screen">
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="w-60 fixed inset-y-0 z-20" style="background:var(--surface); border-right:1px solid var(--border)">
+    <div class="h-full flex flex-col">
+      <div class="px-3 py-4 flex items-center gap-2.5" style="border-bottom:1px solid var(--border)">
+        <div class="w-8 h-8 grid place-items-center text-white" style="background:var(--accent); border-radius:7px">
+          <i class="ph-bold ph-check" style="font-size:1rem"></i>
+        </div>
+        <div>
+          <div class="serif" style="font-size:1.15rem; line-height:1">JobCraft</div>
+          <div class="mono" style="font-size:.6rem; color:var(--text-2); letter-spacing:.12em; text-transform:uppercase">SG · job hunt</div>
+        </div>
+      </div>
+
+      <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto">
+        <div class="nav-link active" data-nav="dashboard" tabindex="0"><i class="ph-bold ph-house"></i><span>Dashboard</span></div>
+        <div class="nav-link" data-nav="jobs" tabindex="0"><i class="ph-bold ph-briefcase"></i><span>Jobs</span></div>
+        <div class="nav-link" data-nav="applications" tabindex="0"><i class="ph-bold ph-kanban"></i><span>Applications</span><span class="mono ml-auto" style="font-size:.7rem; background:var(--yellow-bg); color:var(--yellow-fg); border-radius:9999px; padding:0 .4rem">5</span></div>
+        <div class="nav-link" data-nav="activity" tabindex="0"><i class="ph-bold ph-lightning"></i><span>Activity</span><span class="mono ml-auto" style="font-size:.7rem; background:var(--violet-bg); color:var(--violet-fg); border-radius:9999px; padding:0 .4rem">2</span></div>
+        <div class="nav-link" data-nav="workspace" tabindex="0"><i class="ph-bold ph-folders"></i><span>Workspace</span></div>
+        <div class="nav-link" data-nav="settings" tabindex="0"><i class="ph-bold ph-gear-six"></i><span>Settings</span></div>
+        <div class="mono" style="padding:1rem .75rem .25rem; font-size:.6rem; letter-spacing:.12em; text-transform:uppercase; color:#a8a29e">Observability</div>
+        <div class="nav-link" data-nav="obs" tabindex="0"><i class="ph-bold ph-chart-bar"></i><span>LLM · Evals · Prompts</span></div>
+      </nav>
+
+      <div class="p-3 flex items-center gap-2" style="border-top:1px solid var(--border)">
+        <div class="w-7 h-7 rounded-full grid place-items-center mono" style="background:#EFEDE8; font-size:.65rem; font-weight:600; color:var(--text-2)">BO</div>
+        <div style="font-size:.75rem">
+          <div style="font-weight:600">Bruce Ong</div>
+          <div style="color:var(--text-2)">Autopilot: <span style="color:var(--green-fg); font-weight:600">selective</span></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="flex-1 ml-60">
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view active" data-view="dashboard">
+      <header class="bar flex items-center justify-between px-6 sticky top-0 z-10">
+        <div><h1 class="serif">Dashboard</h1></div>
+        <div class="flex items-center gap-2">
+          <button class="btn btn-ghost" onclick="openScrape()"><i class="ph-bold ph-magnifying-glass"></i>Find jobs</button>
+          <button class="btn btn-primary" data-goto="applications">Review queue<i class="ph-bold ph-arrow-right"></i></button>
+        </div>
+      </header>
+      <div class="p-6 space-y-6">
+        <p class="note">Every tile links into its flow. Hover for the lift.</p>
+        <section class="grid grid-cols-4 gap-4">
+          <div class="card card-link reveal p-5" data-goto="jobs">
+            <div class="mono" style="font-size:.65rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2)">Jobs indexed</div>
+            <div class="serif" style="font-size:2rem; margin-top:.35rem">248</div>
+            <div style="font-size:.75rem; color:var(--text-2); margin-top:.25rem">all sources · <span style="color:var(--green-fg)">+8 today</span></div>
+          </div>
+          <div class="card card-link reveal p-5" data-goto="applications">
+            <div class="mono" style="font-size:.65rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2)">Applications</div>
+            <div class="serif" style="font-size:2rem; margin-top:.35rem">31</div>
+            <div style="font-size:.75rem; color:var(--text-2); margin-top:.25rem">5 need review</div>
+          </div>
+          <div class="card card-link reveal p-5" data-goto="activity">
+            <div class="mono" style="font-size:.65rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2)">Active tasks</div>
+            <div class="serif flex items-center gap-2" style="font-size:2rem; margin-top:.35rem">2 <span class="badge badge-running" style="font-size:.55rem"><span class="dot"></span>live</span></div>
+            <div style="font-size:.75rem; color:var(--text-2); margin-top:.25rem">1 scrape · 1 apply</div>
+          </div>
+          <div class="card card-link reveal p-5" data-goto="obs">
+            <div class="mono" style="font-size:.65rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2)">LLM cost</div>
+            <div class="serif mono" style="font-size:2rem; margin-top:.35rem">$4.12</div>
+            <div style="font-size:.75rem; color:var(--text-2); margin-top:.25rem">all time · 1,204 calls</div>
+          </div>
+        </section>
+
+        <div class="grid grid-cols-3 gap-5">
+          <div class="card reveal p-5 col-span-2">
+            <div class="flex items-center justify-between mb-3">
+              <h2 style="font-size:.95rem; font-weight:600">Top matches</h2>
+              <span style="font-size:.75rem; color:var(--accent); cursor:pointer; font-weight:500" data-goto="jobs">View all</span>
+            </div>
+            <div class="space-y-1">
+              <div class="data-row flex items-center gap-3 p-2.5 cursor-pointer" style="border-radius:8px" data-goto="jobdetail">
+                <span class="chip chip-high">92%</span>
+                <div class="logo sm"><img src="https://logo.clearbit.com/stripe.com" onerror="this.parentNode.textContent='ST'"/></div>
+                <div class="flex-1 min-w-0"><div style="font-size:.875rem; font-weight:600" class="truncate">Forward Deployed Engineer</div><div style="font-size:.75rem; color:var(--text-2)">Stripe · Singapore · Hybrid</div></div>
+                <span class="source-pill">LinkedIn</span>
+              </div>
+              <div class="data-row flex items-center gap-3 p-2.5 cursor-pointer" style="border-radius:8px" data-goto="jobdetail">
+                <span class="chip chip-high">88%</span>
+                <div class="logo sm"><img src="https://logo.clearbit.com/grab.com" onerror="this.parentNode.textContent='GR'"/></div>
+                <div class="flex-1 min-w-0"><div style="font-size:.875rem; font-weight:600" class="truncate">AI Engineer, Platform</div><div style="font-size:.75rem; color:var(--text-2)">Grab · Singapore · On-site</div></div>
+                <span class="source-pill">Greenhouse</span>
+              </div>
+              <div class="data-row flex items-center gap-3 p-2.5 cursor-pointer" style="border-radius:8px" data-goto="jobdetail">
+                <span class="chip chip-mid">71%</span>
+                <div class="logo sm"><img src="https://logo.clearbit.com/openai.com" onerror="this.parentNode.textContent='OA'"/></div>
+                <div class="flex-1 min-w-0"><div style="font-size:.875rem; font-weight:600" class="truncate">Solutions Engineer</div><div style="font-size:.75rem; color:var(--text-2)">OpenAI · Remote (APAC)</div></div>
+                <span class="source-pill">Lever</span>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-4">
+            <div class="card reveal p-5">
+              <h2 style="font-size:.95rem; font-weight:600" class="mb-3">Activity</h2>
+              <div class="space-y-3">
+                <div>
+                  <div class="flex justify-between mb-1.5" style="font-size:.75rem"><span style="font-weight:500">Scraping LinkedIn</span><span class="mono" style="color:var(--text-2)">page 3/4</span></div>
+                  <div class="progress accent"><span style="width:72%"></span></div>
+                </div>
+                <div>
+                  <div class="flex justify-between mb-1.5" style="font-size:.75rem"><span style="font-weight:500">Filling Grab application</span><span class="mono" style="color:var(--text-2)">7/9</span></div>
+                  <div class="progress accent"><span style="width:78%"></span></div>
+                </div>
+              </div>
+              <div style="font-size:.75rem; color:var(--accent); cursor:pointer; margin-top:.85rem; font-weight:500" data-goto="activity">Open Activity</div>
+            </div>
+            <div class="card reveal p-5">
+              <h2 style="font-size:.95rem; font-weight:600" class="mb-2.5">Sources</h2>
+              <div class="space-y-2" style="font-size:.8125rem">
+                <div class="flex justify-between"><span>LinkedIn</span><span class="mono" style="color:var(--text-2)">142</span></div>
+                <div class="flex justify-between"><span>MyCareersFuture</span><span class="mono" style="color:var(--text-2)">78</span></div>
+                <div class="flex justify-between"><span>Greenhouse</span><span class="mono" style="color:var(--text-2)">18</span></div>
+                <div class="flex justify-between"><span>Lever</span><span class="mono" style="color:var(--text-2)">10</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ JOBS ============ -->
+    <section class="view" data-view="jobs">
+      <header class="bar flex items-center justify-between px-6 sticky top-0 z-10">
+        <h1 class="serif">Jobs</h1>
+        <div class="flex items-center gap-2">
+          <button class="btn btn-ghost">Run matches</button>
+          <button class="btn btn-primary" onclick="openScrape()"><i class="ph-bold ph-magnifying-glass"></i>Find jobs</button>
+        </div>
+      </header>
+      <div class="p-6 space-y-4">
+        <p class="note">Custom dropdowns (not native). Real logos + full company names. Whole row clickable.</p>
+        <div class="card p-3 flex items-center gap-2 flex-wrap">
+          <input placeholder="Search role, company, skill" class="flex-1" style="min-width:200px; font-size:.875rem; padding:.5rem .75rem; border-radius:6px; border:1px solid var(--border); outline:none; background:var(--surface)" />
+          <div class="sel" data-sel><div class="sel-trigger"><span data-sel-label>All sources</span><i class="ph-bold ph-caret-down"></i></div>
+            <div class="sel-pop"><div class="sel-item on"><i class="ph-bold ph-check"></i>All sources</div><div class="sel-item"><i class="ph-bold ph-check"></i>LinkedIn</div><div class="sel-item"><i class="ph-bold ph-check"></i>MyCareersFuture</div><div class="sel-item"><i class="ph-bold ph-check"></i>Greenhouse</div><div class="sel-item"><i class="ph-bold ph-check"></i>Lever</div></div>
+          </div>
+          <div class="sel" data-sel><div class="sel-trigger"><span data-sel-label>Best fit</span><i class="ph-bold ph-caret-down"></i></div>
+            <div class="sel-pop"><div class="sel-item on"><i class="ph-bold ph-check"></i>Best fit</div><div class="sel-item"><i class="ph-bold ph-check"></i>Newest</div><div class="sel-item"><i class="ph-bold ph-check"></i>Company A–Z</div></div>
+          </div>
+        </div>
+
+        <div class="card overflow-hidden">
+          <table class="w-full" style="font-size:.875rem">
+            <thead style="color:var(--text-2); border-bottom:1px solid var(--border)">
+              <tr class="text-left mono" style="font-size:.65rem; letter-spacing:.08em; text-transform:uppercase">
+                <th class="px-4 py-3 font-medium">Fit</th><th class="px-4 py-3 font-medium">Role & company</th><th class="px-4 py-3 font-medium">Location</th><th class="px-4 py-3 font-medium">Posted</th><th class="px-4 py-3 font-medium text-right">Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="data-row cursor-pointer" style="border-top:1px solid var(--border-soft)" data-goto="jobdetail">
+                <td class="px-4 py-3"><span class="chip chip-high">92%</span></td>
+                <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="logo"><img src="https://logo.clearbit.com/stripe.com" onerror="this.parentNode.textContent='ST'"/></div>
+                  <div><div style="font-weight:600">Forward Deployed Engineer</div><div style="font-size:.75rem; color:var(--text-2)">Stripe</div>
+                    <div class="flex gap-1 mt-1.5"><span class="tag tag-be">Python</span><span class="tag tag-infra">AWS</span><span class="tag tag-ml">LLMs</span><span class="tag tag-gen">+3</span></div></div></div></td>
+                <td class="px-4 py-3" style="font-size:.75rem; color:var(--text-2)">Singapore · Hybrid</td>
+                <td class="px-4 py-3 mono" style="font-size:.75rem; color:#a8a29e">2d</td>
+                <td class="px-4 py-3 text-right"><span class="source-pill">LinkedIn</span></td>
+              </tr>
+              <tr class="data-row cursor-pointer" style="border-top:1px solid var(--border-soft)" data-goto="jobdetail">
+                <td class="px-4 py-3"><span class="chip chip-high">88%</span></td>
+                <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="logo"><img src="https://logo.clearbit.com/grab.com" onerror="this.parentNode.textContent='GR'"/></div>
+                  <div><div style="font-weight:600">AI Engineer, Platform</div><div style="font-size:.75rem; color:var(--text-2)">Grab</div>
+                    <div class="flex gap-1 mt-1.5"><span class="tag tag-ml">PyTorch</span><span class="tag tag-be">Go</span><span class="tag tag-infra">K8s</span></div></div></div></td>
+                <td class="px-4 py-3" style="font-size:.75rem; color:var(--text-2)">Singapore · On-site</td>
+                <td class="px-4 py-3 mono" style="font-size:.75rem; color:#a8a29e">1d</td>
+                <td class="px-4 py-3 text-right"><span class="source-pill">Greenhouse</span></td>
+              </tr>
+              <tr class="data-row cursor-pointer" style="border-top:1px solid var(--border-soft)" data-goto="jobdetail">
+                <td class="px-4 py-3"><span class="chip chip-mid">71%</span></td>
+                <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="logo">EV</div>
+                  <div><div style="font-weight:600">Senior Systems Engineer</div><div style="font-size:.75rem; color:var(--text-2)">Evolution Recruitment <span style="color:#b9b6ad">· unknown logo → initials</span></div>
+                    <div class="flex gap-1 mt-1.5"><span class="tag tag-infra">Linux</span><span class="tag tag-be">SQL</span></div></div></div></td>
+                <td class="px-4 py-3" style="font-size:.75rem; color:var(--text-2)">Singapore</td>
+                <td class="px-4 py-3 mono" style="font-size:.75rem; color:#a8a29e">5h</td>
+                <td class="px-4 py-3 text-right"><span class="source-pill">MCF</span></td>
+              </tr>
+              <!-- loading state demo (dashboard skill) -->
+              <tr style="border-top:1px solid var(--border-soft)">
+                <td class="px-4 py-3"><div class="sk" style="width:3rem; height:1.4rem"></div></td>
+                <td class="px-4 py-3"><div class="flex items-center gap-3"><div class="sk" style="width:2.25rem; height:2.25rem; border-radius:8px"></div><div><div class="sk" style="width:11rem; height:.9rem"></div><div class="sk mt-1.5" style="width:5rem; height:.7rem"></div></div></div></td>
+                <td class="px-4 py-3"><div class="sk" style="width:5rem; height:.7rem"></div></td>
+                <td class="px-4 py-3"><div class="sk" style="width:1.5rem; height:.7rem"></div></td>
+                <td class="px-4 py-3"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ JOB DETAIL ============ -->
+    <section class="view" data-view="jobdetail">
+      <header class="bar flex items-center gap-3 px-6 sticky top-0 z-10">
+        <span class="btn btn-ghost" data-goto="jobs"><i class="ph-bold ph-arrow-left"></i>Jobs</span>
+        <div class="logo sm"><img src="https://logo.clearbit.com/stripe.com" onerror="this.parentNode.textContent='ST'"/></div>
+        <div><h1 class="serif" style="font-size:1.25rem">Forward Deployed Engineer</h1><p style="font-size:.7rem; color:var(--text-2)">Stripe · Singapore · Hybrid</p></div>
+        <div class="ml-auto flex gap-2 items-center"><span class="chip chip-high">92%</span><button class="btn btn-primary">Generate & apply</button></div>
+      </header>
+      <div class="p-6 grid grid-cols-3 gap-5">
+        <div class="col-span-2 card reveal p-6 space-y-5">
+          <div><h2 style="font-size:.95rem; font-weight:600" class="mb-3">Match breakdown</h2>
+            <div class="space-y-2.5">
+              <div><div class="flex justify-between mb-1.5" style="font-size:.8125rem"><span>Skills</span><span class="mono">95%</span></div><div class="progress done"><span style="width:95%"></span></div></div>
+              <div><div class="flex justify-between mb-1.5" style="font-size:.8125rem"><span>Seniority</span><span class="mono">90%</span></div><div class="progress done"><span style="width:90%"></span></div></div>
+              <div><div class="flex justify-between mb-1.5" style="font-size:.8125rem"><span>Location</span><span class="mono">85%</span></div><div class="progress"><span style="width:85%"></span></div></div>
+            </div>
+          </div>
+          <div><h2 style="font-size:.95rem; font-weight:600" class="mb-2">Description</h2><p style="font-size:.875rem; color:#444; line-height:1.6">The Forward Deployed Engineer works directly with client stakeholders to design, build, and deploy scalable, production-grade solutions within real-world enterprise environments.</p></div>
+        </div>
+        <div class="card reveal p-6"><h2 style="font-size:.95rem; font-weight:600" class="mb-2">Generate documents</h2><p class="note" style="border:0; padding:0; margin-bottom:.85rem">Tailored résumé + cover letter grounded in your Workspace.</p><button class="btn btn-primary w-full justify-center">Generate résumé</button></div>
+      </div>
+    </section>
+
+    <!-- ============ APPLICATIONS ============ -->
+    <section class="view" data-view="applications">
+      <header class="bar flex items-center justify-between px-6 sticky top-0 z-10">
+        <h1 class="serif">Applications</h1>
+        <div class="flex border rounded-md overflow-hidden" style="border-color:var(--border); font-size:.75rem"><span class="px-3 py-1.5" style="background:#EFEDE8; font-weight:600">Board</span><span class="px-3 py-1.5" style="color:var(--text-2); cursor:pointer">Table</span></div>
+      </header>
+      <div class="p-6">
+        <p class="note mb-4">The old "Apply Queue" page is gone — those items are the <b>Needs review</b> column. One pipeline.</p>
+        <div class="grid grid-cols-5 gap-4">
+          <div>
+            <div class="flex items-center justify-between mb-3 px-1"><div class="flex items-center gap-1.5"><span style="width:.45rem; height:.45rem; border-radius:9999px; background:#a8a29e"></span><span style="font-size:.75rem; font-weight:600">Matched</span></div><span class="mono" style="font-size:.75rem; color:var(--text-2)">3</span></div>
+            <div class="space-y-2"><div class="card card-link p-3"><div class="flex items-center gap-2 mb-2"><div class="logo sm"><img src="https://logo.clearbit.com/openai.com" onerror="this.parentNode.textContent='OA'"/></div><div style="font-size:.75rem"><div style="font-weight:600">Solutions Engineer</div><div style="color:var(--text-2)">OpenAI</div></div></div><span class="chip chip-mid" style="min-width:0">71%</span></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-3 px-1"><div class="flex items-center gap-1.5"><span style="width:.45rem; height:.45rem; border-radius:9999px; background:#1F6C9F"></span><span style="font-size:.75rem; font-weight:600">Drafting</span></div><span class="mono" style="font-size:.75rem; color:var(--text-2)">1</span></div>
+            <div class="space-y-2"><div class="card card-link p-3" style="border-left:2px solid var(--accent)"><div class="flex items-center gap-2 mb-2"><div class="logo sm"><img src="https://logo.clearbit.com/stripe.com" onerror="this.parentNode.textContent='ST'"/></div><div style="font-size:.75rem"><div style="font-weight:600">Forward Deployed Eng</div><div style="color:var(--text-2)">Stripe</div></div></div><div class="progress accent mt-1"><span style="width:60%"></span></div></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-3 px-1"><div class="flex items-center gap-1.5"><span style="width:.45rem; height:.45rem; border-radius:9999px; background:#956400"></span><span style="font-size:.75rem; font-weight:600">Needs review</span></div><span class="mono" style="font-size:.7rem; background:var(--yellow-bg); color:var(--yellow-fg); border-radius:9999px; padding:0 .4rem">2</span></div>
+            <div class="space-y-2">
+              <div class="card card-link p-3"><div class="flex items-center gap-2 mb-2"><div class="logo sm"><img src="https://logo.clearbit.com/grab.com" onerror="this.parentNode.textContent='GR'"/></div><div style="font-size:.75rem"><div style="font-weight:600">AI Engineer</div><div style="color:var(--text-2)">Grab</div></div></div><span class="badge badge-review"><span class="dot"></span>7/9 fields</span></div>
+              <div class="card card-link p-3"><div class="flex items-center gap-2 mb-2"><div class="logo sm">SH</div><div style="font-size:.75rem"><div style="font-weight:600">Backend Engineer</div><div style="color:var(--text-2)">Shopee</div></div></div><span class="badge badge-review"><span class="dot"></span>needs answer</span></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-3 px-1"><div class="flex items-center gap-1.5"><span style="width:.45rem; height:.45rem; border-radius:9999px; background:#346538"></span><span style="font-size:.75rem; font-weight:600">Submitted</span></div><span class="mono" style="font-size:.75rem; color:var(--text-2)">12</span></div>
+            <div class="space-y-2"><div class="card card-link p-3"><div class="flex items-center gap-2"><div class="logo sm">SE</div><div style="font-size:.75rem"><div style="font-weight:600">Data Engineer</div><div style="color:var(--text-2)">Sea</div></div></div><span class="badge badge-done mt-2"><span class="dot"></span>3d ago</span></div></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-3 px-1"><div class="flex items-center gap-1.5"><span style="width:.45rem; height:.45rem; border-radius:9999px; background:#6B3FA0"></span><span style="font-size:.75rem; font-weight:600">Interview</span></div><span class="mono" style="font-size:.75rem; color:var(--text-2)">2</span></div>
+            <div class="space-y-2"><div class="card card-link p-3" style="border-left:2px solid var(--green-fg)"><div class="flex items-center gap-2"><div class="logo sm"><img src="https://logo.clearbit.com/grab.com" onerror="this.parentNode.textContent='GR'"/></div><div style="font-size:.75rem"><div style="font-weight:600">ML Engineer</div><div style="color:var(--text-2)">Grab</div></div></div></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ACTIVITY ============ -->
+    <section class="view" data-view="activity">
+      <header class="bar flex items-center justify-between px-6 sticky top-0 z-10">
+        <h1 class="serif">Activity</h1>
+        <button class="btn btn-ghost">Clear finished</button>
+      </header>
+      <div class="p-6 space-y-4">
+        <p class="note">New hub. Both async task types live here — launch a scrape, keep working, track it back here.</p>
+
+        <div class="card reveal p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2"><span class="badge badge-running"><span class="dot"></span>Running</span><span style="font-size:.875rem; font-weight:600">Scrape · "Forward Deployed Engineer", "AI Engineer"</span></div>
+            <span class="mono" style="font-size:.7rem; color:var(--text-2)">started 0:42 ago</span>
+          </div>
+          <div class="progress accent mb-3"><span style="width:64%"></span></div>
+          <table class="w-full" style="font-size:.75rem">
+            <thead style="color:var(--text-2); border-bottom:1px solid var(--border)"><tr class="text-left mono" style="font-size:.6rem; letter-spacing:.06em; text-transform:uppercase"><th class="py-2 font-medium">Source</th><th class="py-2 font-medium text-right">Listed</th><th class="py-2 font-medium text-right">New</th><th class="py-2 font-medium text-right">Status</th></tr></thead>
+            <tbody>
+              <tr style="border-top:1px solid var(--border-soft)"><td class="py-2" style="font-weight:500">linkedin</td><td class="py-2 text-right mono">17</td><td class="py-2 text-right mono" style="color:var(--green-fg)">8</td><td class="py-2 text-right"><span class="badge badge-done" style="font-size:.55rem"><span class="dot"></span>done</span></td></tr>
+              <tr style="border-top:1px solid var(--border-soft)"><td class="py-2" style="font-weight:500">mycareersfuture</td><td class="py-2 text-right mono">20</td><td class="py-2 text-right mono" style="color:var(--green-fg)">12</td><td class="py-2 text-right"><span class="badge badge-running" style="font-size:.55rem"><span class="dot"></span>page 1</span></td></tr>
+              <tr style="border-top:1px solid var(--border-soft)"><td class="py-2" style="color:var(--text-2)">greenhouse <span style="color:#b9b6ad">· no boards set</span></td><td class="py-2 text-right mono" style="color:#b9b6ad">—</td><td class="py-2 text-right mono" style="color:#b9b6ad">—</td><td class="py-2 text-right"><span class="badge badge-queued" style="font-size:.55rem"><span class="dot"></span>skipped</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card reveal p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2"><span class="badge badge-filling"><span class="dot"></span>Filling</span><span style="font-size:.875rem; font-weight:600">Apply · AI Engineer @ Grab</span></div>
+            <span class="mono" style="font-size:.7rem; color:var(--text-2)">7 / 9 fields</span>
+          </div>
+          <div class="progress accent mb-2"><span style="width:78%"></span></div>
+          <div style="font-size:.8125rem; color:var(--text-2)">Mapped: name, email, résumé, work auth… <span style="color:var(--accent); cursor:pointer; font-weight:500" data-goto="applications">Review remaining 2</span></div>
+        </div>
+
+        <div class="card reveal p-5" style="opacity:.75">
+          <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="badge badge-done"><span class="dot"></span>Done</span><span style="font-size:.875rem; font-weight:600">Scrape · weekly LinkedIn sweep</span></div><span class="mono" style="font-size:.7rem; color:var(--text-2)">2h ago · 31 new</span></div>
+        </div>
+        <div class="card reveal p-5" style="opacity:.75">
+          <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="badge badge-failed"><span class="dot"></span>Failed</span><span style="font-size:.875rem; font-weight:600">Apply · Backend Engineer @ Shopee</span></div><span style="font-size:.75rem; color:var(--text-2)">CAPTCHA · <span style="color:var(--accent); cursor:pointer; font-weight:500">retry</span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ WORKSPACE ============ -->
+    <section class="view" data-view="workspace">
+      <header class="bar flex items-center justify-between px-6 sticky top-0 z-10">
+        <h1 class="serif">Workspace</h1>
+        <button class="btn btn-primary"><i class="ph-bold ph-plus"></i>Add item</button>
+      </header>
+      <div class="px-6 pt-3 flex gap-5" style="border-bottom:1px solid var(--border)">
+        <div class="tab active" data-ws-tab="exp">Experience</div>
+        <div class="tab" data-ws-tab="docs">Documents</div>
+      </div>
+      <div class="p-6">
+        <div data-ws="exp">
+          <p class="note mb-4">Was "Experience". The corpus every résumé claim is grounded in.</p>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="card reveal p-5"><div class="mono mb-2.5" style="font-size:.6rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2)">Work</div>
+              <div class="flex items-center gap-2"><div class="logo sm"><img src="https://logo.clearbit.com/grab.com" onerror="this.parentNode.textContent='GR'"/></div><div style="font-size:.875rem"><div style="font-weight:600">Senior Engineer · Grab</div><div style="font-size:.75rem; color:var(--text-2)">2022–present</div></div></div></div>
+            <div class="card reveal p-5"><div class="mono mb-2.5" style="font-size:.6rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-2)">Skills</div>
+              <div class="flex flex-wrap gap-1"><span class="tag tag-be">Python</span><span class="tag tag-ml">PyTorch</span><span class="tag tag-infra">AWS</span><span class="tag tag-fe">React</span></div></div>
+          </div>
+        </div>
+        <div data-ws="docs" style="display:none">
+          <p class="note mb-4">Was "Documents". Generated artifacts tied to applications.</p>
+          <div class="card overflow-hidden"><table class="w-full" style="font-size:.875rem"><thead style="color:var(--text-2); border-bottom:1px solid var(--border)"><tr class="text-left mono" style="font-size:.6rem; letter-spacing:.08em; text-transform:uppercase"><th class="px-4 py-3 font-medium">Document</th><th class="px-4 py-3 font-medium">For</th><th class="px-4 py-3 font-medium">Score</th><th class="px-4 py-3 font-medium text-right"></th></tr></thead>
+            <tbody><tr class="data-row" style="border-top:1px solid var(--border-soft)"><td class="px-4 py-3" style="font-weight:600">Résumé · FDE.pdf</td><td class="px-4 py-3" style="font-size:.8125rem; color:var(--text-2)"><span class="inline-flex items-center gap-1.5"><span class="logo sm"><img src="https://logo.clearbit.com/stripe.com" onerror="this.parentNode.textContent='ST'"/></span>Stripe</span></td><td class="px-4 py-3"><span class="chip chip-high" style="min-width:0">92</span></td><td class="px-4 py-3 text-right"><span class="btn btn-ghost" style="font-size:.75rem">Preview</span></td></tr></tbody></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section class="view" data-view="settings">
+      <header class="bar flex items-center px-6 sticky top-0 z-10"><h1 class="serif">Settings</h1></header>
+      <div class="p-6 max-w-3xl space-y-5">
+        <p class="note">Scrape profiles still live here, but "Run" now launches a background task → Activity. No blocking.</p>
+        <div class="card reveal p-5">
+          <div class="flex items-center justify-between mb-3"><h2 style="font-size:.95rem; font-weight:600">Saved scrape profiles</h2><button class="btn btn-ghost" style="font-size:.75rem"><i class="ph-bold ph-plus"></i>New profile</button></div>
+          <div class="data-row flex items-center gap-3 p-3" style="border:1px solid var(--border); border-radius:8px">
+            <div class="flex-1"><div style="font-size:.875rem; font-weight:600">Weekly SG sweep</div><div style="font-size:.75rem; color:var(--text-2)">LinkedIn + MCF · "Forward Deployed Engineer", "AI Engineer" · 30d</div></div>
+            <span class="btn btn-ghost" style="font-size:.75rem">Edit</span>
+            <button class="btn btn-primary" style="font-size:.75rem" onclick="goTo('activity')">Run<i class="ph-bold ph-arrow-right"></i></button>
+          </div>
+          <p class="note mt-3" style="border:0; padding:0">Greenhouse/Lever fields clarified: "company tokens like <b>anthropic</b>, <b>stripe</b> — not job titles".</p>
+        </div>
+        <div class="card reveal p-5"><h2 style="font-size:.95rem; font-weight:600" class="mb-1">Autopilot</h2><p class="note" style="border:0; padding:0">Native &lt;select&gt; replaced with the styled dropdown (see Jobs toolbar).</p></div>
+      </div>
+    </section>
+
+    <!-- ============ OBSERVABILITY ============ -->
+    <section class="view" data-view="obs">
+      <header class="bar flex items-center px-6 sticky top-0 z-10"><h1 class="serif">Observability</h1></header>
+      <div class="p-6"><div class="card p-10 empty" style="min-height:160px"><i class="ph-fill ph-chart-bar" style="font-size:1.6rem; color:#d6d3ce"></i>Collapsed under one admin section instead of three top-level items.</div></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== SCRAPE MODAL ===================== -->
+<div class="scrim" id="scrapeModal">
+  <div class="card p-6 w-[460px]" style="box-shadow:0 20px 60px rgba(0,0,0,.18)">
+    <div class="flex items-center justify-between mb-4"><h2 class="serif" style="font-size:1.25rem">Find jobs</h2><span class="mono" style="font-size:.65rem; color:var(--text-2)">launches a background task</span></div>
+    <div class="space-y-3.5">
+      <div><label style="font-size:.75rem; color:var(--text-2); font-weight:500">Keywords</label><div class="mt-1.5 flex flex-wrap gap-1 px-2 py-1.5" style="border:1px solid var(--border); border-radius:6px"><span class="tag tag-gen">Forward Deployed Engineer ✕</span><span class="tag tag-gen">AI Engineer ✕</span><input style="flex:1; font-size:.75rem; outline:none; border:0; background:transparent" placeholder="add"/></div></div>
+      <div class="flex gap-3">
+        <div class="flex-1"><label style="font-size:.75rem; color:var(--text-2); font-weight:500">Sources</label>
+          <div class="sel mt-1.5" data-sel><div class="sel-trigger" style="min-width:100%"><span data-sel-label>LinkedIn + MCF</span><i class="ph-bold ph-caret-down"></i></div>
+            <div class="sel-pop"><div class="sel-item on"><i class="ph-bold ph-check"></i>LinkedIn + MCF</div><div class="sel-item"><i class="ph-bold ph-check"></i>All sources</div></div></div>
+        </div>
+        <div style="width:96px"><label style="font-size:.75rem; color:var(--text-2); font-weight:500">Lookback</label><input value="30" class="mono mt-1.5 w-full" style="font-size:.875rem; padding:.5rem; border-radius:6px; border:1px solid var(--border); outline:none"/></div>
+      </div>
+      <label class="flex items-center gap-2" style="font-size:.8125rem; color:var(--text)"><input type="checkbox"/> Extract with AI <span style="color:var(--text-2); font-size:.7rem">(slower — salary, seniority, tech stack)</span></label>
+    </div>
+    <div class="flex gap-2 mt-5 justify-end"><button class="btn btn-ghost" onclick="closeScrape()">Cancel</button><button class="btn btn-primary" onclick="closeScrape(); goTo('activity')">Start scrape<i class="ph-bold ph-arrow-right"></i></button></div>
+  </div>
+</div>
+
+<script>
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function revealIn(scope){
+    const els = (scope||document).querySelectorAll('.reveal:not(.in)');
+    if(reduce){ els.forEach(e=>e.classList.add('in')); return; }
+    els.forEach((e,i)=>{ e.style.transitionDelay=(i*80)+'ms'; });
+    const io = new IntersectionObserver((ents)=>{ ents.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } }); },{threshold:.08});
+    els.forEach(e=>io.observe(e));
+  }
+  function goTo(view){
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.dataset.view===view));
+    document.querySelectorAll('.nav-link').forEach(n=>n.classList.toggle('active', n.dataset.nav===view));
+    window.scrollTo(0,0);
+    const active=document.querySelector('.view.active');
+    active.querySelectorAll('.reveal').forEach(e=>e.classList.remove('in'));
+    requestAnimationFrame(()=>revealIn(active));
+  }
+  document.querySelectorAll('[data-nav]').forEach(n=>{ n.addEventListener('click',()=>goTo(n.dataset.nav)); n.addEventListener('keydown',e=>{ if(e.key==='Enter') goTo(n.dataset.nav); }); });
+  document.querySelectorAll('[data-goto]').forEach(el=>el.addEventListener('click',e=>{ e.stopPropagation(); goTo(el.dataset.goto); }));
+
+  document.querySelectorAll('[data-sel]').forEach(sel=>{
+    const trigger=sel.querySelector('.sel-trigger'), label=sel.querySelector('[data-sel-label]');
+    trigger.addEventListener('click',e=>{ e.stopPropagation(); document.querySelectorAll('[data-sel]').forEach(s=>{ if(s!==sel) s.classList.remove('open'); }); sel.classList.toggle('open'); });
+    sel.querySelectorAll('.sel-item').forEach(it=>it.addEventListener('click',e=>{ e.stopPropagation(); sel.querySelectorAll('.sel-item').forEach(x=>x.classList.remove('on')); it.classList.add('on'); label.textContent=it.textContent.trim(); sel.classList.remove('open'); }));
+  });
+  document.addEventListener('click',()=>document.querySelectorAll('[data-sel]').forEach(s=>s.classList.remove('open')));
+
+  document.querySelectorAll('[data-ws-tab]').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('[data-ws-tab]').forEach(x=>x.classList.toggle('active',x===t));
+    document.querySelectorAll('[data-ws]').forEach(p=>p.style.display = p.dataset.ws===t.dataset.wsTab ? '' : 'none');
+  }));
+
+  function openScrape(){ document.getElementById('scrapeModal').classList.add('open'); }
+  function closeScrape(){ document.getElementById('scrapeModal').classList.remove('open'); }
+
+  revealIn(document.querySelector('.view.active'));
+</script>
+</body>
+</html>

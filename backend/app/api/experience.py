@@ -13,6 +13,7 @@ from app.schemas.experience import (
     ExperienceItemCreate,
     ExperienceItemRead,
     ExperienceItemUpdate,
+    ReorderRequest,
 )
 
 router = APIRouter(prefix="/api/experience", tags=["experience"])
@@ -73,6 +74,18 @@ async def update_experience_item(
     updated = await repo.update(item, data)
     await session.commit()
     return updated  # type: ignore[return-value]
+
+
+@router.put("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+async def reorder_experience_items(
+    data: ReorderRequest,
+    current_user: User = Depends(get_current_user),  # noqa: B008
+    repo: ExperienceRepository = Depends(_get_repo),  # noqa: B008
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> None:
+    """Update sort_order for all items of a given kind."""
+    await repo.reorder_kind(current_user.id, data.kind, data.ids)
+    await session.commit()
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,5 +1,5 @@
 export type ArtifactKind = 'resume' | 'cover_letter'
-export type ArtifactFormat = 'markdown' | 'pdf'
+export type ArtifactFormat = 'markdown' | 'pdf' | 'json'
 
 export interface ArtifactScores {
   fit: number
@@ -19,7 +19,15 @@ export interface Artifact {
   is_baseline: boolean
   scores: ArtifactScores | null
   prompt_version_id: string | null
+  template_id: string | null
   created_at: string
+}
+
+export interface ResumeTemplate {
+  id: string
+  name: string
+  description: string
+  thumbnail_url: string
 }
 
 export interface StyleConfig {

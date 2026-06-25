@@ -2,9 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import type { Artifact, StyleConfig } from '@/types/artifact'
-import { generateArtifact, listJobArtifacts, ApiError } from '@/lib/api'
+import type { Artifact, StyleConfig, ResumeTemplate } from '@/types/artifact'
+import {
+  generateArtifact,
+  listJobArtifacts,
+  getTemplates,
+  getArtifactPreview,
+  downloadArtifactPdf,
+  ApiError,
+} from '@/lib/api'
 import { scoreColor } from '@/lib/scoreColor'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface GenerationPanelProps {
   jobId: string
@@ -14,6 +28,81 @@ const DEFAULT_STYLE: StyleConfig = {
   tone: 'professional',
   length: 'standard',
   emphasis: [],
+}
+
+const A4_W = 794
+const A4_H = 1123
+
+function ResumeIframe({ artifactId }: { artifactId: string }) {
+  const [html, setHtml] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setIsLoading(true)
+    getArtifactPreview(artifactId, controller.signal)
+      .then(h => {
+        if (!controller.signal.aborted) {
+          setHtml(h)
+          setIsLoading(false)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          if (!(err instanceof ApiError && err.status === 0)) {
+            toast.error('Could not load preview.')
+          }
+          setIsLoading(false)
+        }
+      })
+    return () => controller.abort()
+  }, [artifactId])
+
+  if (isLoading) {
+    return (
+      <div
+        className="w-full bg-zinc-50 border border-zinc-200 rounded flex items-center justify-center text-xs text-zinc-400"
+        style={{ height: '320px' }}
+      >
+        Loading preview…
+      </div>
+    )
+  }
+
+  if (!html) {
+    return (
+      <div
+        className="w-full bg-zinc-50 border border-zinc-200 rounded flex items-center justify-center text-xs text-zinc-400"
+        style={{ height: '320px' }}
+      >
+        Preview unavailable
+      </div>
+    )
+  }
+
+  const containerW = 540
+  const scale = containerW / A4_W
+
+  return (
+    <div
+      className="overflow-hidden rounded border border-zinc-200"
+      style={{ width: `${containerW}px`, height: `${Math.round(A4_H * scale)}px` }}
+    >
+      <iframe
+        srcDoc={html}
+        title="Resume preview"
+        sandbox="allow-same-origin"
+        style={{
+          width: `${A4_W}px`,
+          height: `${A4_H}px`,
+          border: 'none',
+          transformOrigin: '0 0',
+          transform: `scale(${scale})`,
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
+  )
 }
 
 function SimpleMarkdown({ content }: { content: string }) {
@@ -39,12 +128,11 @@ function SimpleMarkdown({ content }: { content: string }) {
   )
 }
 
-function ArtifactPreview({ artifact }: { artifact: Artifact }) {
+function ArtifactScoreRow({ artifact }: { artifact: Artifact }) {
   const scores = artifact.scores
   const isGrounded = scores ? scores.groundedness >= 0.8 : false
-  const groundednessLabel = isGrounded ? 'grounded' : 'review needed'
-  const groundednessBorderClass = isGrounded ? 'border-emerald-400' : 'border-rose-400'
   const groundednessTextClass = isGrounded ? 'text-emerald-600' : 'text-rose-600'
+  const groundednessBorderClass = isGrounded ? 'border-emerald-400' : 'border-rose-400'
   const groundednessBgClass = isGrounded ? '' : 'bg-rose-50/60'
 
   return (
@@ -56,20 +144,19 @@ function ArtifactPreview({ artifact }: { artifact: Artifact }) {
             className={`chip ${scoreColor(scores.groundedness)}`}
             style={{ minWidth: 'auto', padding: '0.1rem 0.4rem', fontSize: '0.65rem' }}
           >
-            {groundednessLabel}
+            {isGrounded ? 'grounded' : 'review needed'}
           </span>
         </div>
       )}
-      <div className={`border-l-2 ${groundednessBorderClass} pl-3 py-0.5 ${groundednessBgClass} rounded-r`}>
-        {!isGrounded && (
-          <span className={`text-xs ${groundednessTextClass} block mb-1`}>
-            ⚠ groundedness score {scores ? scores.groundedness.toFixed(2) : 'n/a'} — review claims before sending
+      {!isGrounded && (
+        <div className={`border-l-2 ${groundednessBorderClass} pl-3 py-0.5 ${groundednessBgClass} rounded-r`}>
+          <span className={`text-xs ${groundednessTextClass} block`}>
+            ⚠ groundedness {scores ? scores.groundedness.toFixed(2) : 'n/a'} — review claims before sending
           </span>
-        )}
-        <SimpleMarkdown content={artifact.content} />
-      </div>
+        </div>
+      )}
       {scores && (
-        <div className="flex flex-wrap gap-1.5 pt-1">
+        <div className="flex flex-wrap gap-1.5">
           <span className={`chip ${scoreColor(scores.fit)}`} title="Fit">{scores.fit.toFixed(2)}</span>
           <span className={`chip ${scoreColor(scores.groundedness)}`} title="Grounded">{scores.groundedness.toFixed(2)}</span>
           <span className={`chip ${scoreColor(scores.ats_keywords)}`} title="ATS">{scores.ats_keywords.toFixed(2)}</span>
@@ -81,14 +168,77 @@ function ArtifactPreview({ artifact }: { artifact: Artifact }) {
   )
 }
 
+function TemplatePicker({
+  templates,
+  selectedId,
+  onSelect,
+  disabled,
+}: {
+  templates: ResumeTemplate[]
+  selectedId: string
+  onSelect: (id: string) => void
+  disabled: boolean
+}) {
+  return (
+    <div>
+      <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide block mb-1.5">
+        Template
+      </label>
+      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+        {templates.map(t => (
+          <button
+            key={t.id}
+            type="button"
+            disabled={disabled}
+            title={t.description}
+            onClick={() => onSelect(t.id)}
+            className={[
+              'flex-none flex flex-col items-center gap-1 rounded-lg border-2 p-1 transition-colors',
+              'focus:outline-none focus:ring-2 focus:ring-indigo-300',
+              selectedId === t.id
+                ? 'border-indigo-500 bg-indigo-50'
+                : 'border-zinc-200 bg-white hover:border-zinc-300',
+              disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+            ].join(' ')}
+            style={{ width: '72px' }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={t.thumbnail_url}
+              alt={t.name}
+              className="w-full rounded object-cover border border-zinc-100"
+              style={{ height: '90px' }}
+              loading="lazy"
+            />
+            <span className="text-[10px] text-zinc-600 text-center leading-tight line-clamp-2">
+              {t.name}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export function GenerationPanel({ jobId }: GenerationPanelProps) {
   const [style, setStyle] = useState<StyleConfig>(DEFAULT_STYLE)
+  const [selectedTemplateId, setSelectedTemplateId] = useState('standard')
+  const [templates, setTemplates] = useState<ResumeTemplate[]>([])
   const [isGeneratingResume, setIsGeneratingResume] = useState(false)
   const [isGeneratingCover, setIsGeneratingCover] = useState(false)
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
   const [latestResume, setLatestResume] = useState<Artifact | null>(null)
   const [latestCover, setLatestCover] = useState<Artifact | null>(null)
   const [priorArtifacts, setPriorArtifacts] = useState<Artifact[]>([])
   const [isLoadingPrior, setIsLoadingPrior] = useState(true)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    getTemplates(controller.signal)
+      .then(ts => { if (!controller.signal.aborted) setTemplates(ts) })
+      .catch(() => { /* non-critical, UI degrades to no picker */ })
+    return () => controller.abort()
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -101,7 +251,7 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
       .catch((err: unknown) => {
         if (controller.signal.aborted) return
         if (!(err instanceof ApiError && err.status === 404)) {
-          // 404 just means no artifacts yet — not an error to surface
+          // 404 = no artifacts yet, not an error to surface
         }
         setIsLoadingPrior(false)
       })
@@ -115,7 +265,10 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
     else setIsGeneratingCover(true)
 
     try {
-      const artifact = await generateArtifact(jobId, { kind, style })
+      const payload = isResume
+        ? { kind, style, template_id: selectedTemplateId }
+        : { kind, style }
+      const artifact = await generateArtifact(jobId, payload)
       if (isResume) setLatestResume(artifact)
       else setLatestCover(artifact)
       setPriorArtifacts(prev => [artifact, ...prev])
@@ -125,6 +278,19 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
     } finally {
       if (isResume) setIsGeneratingResume(false)
       else setIsGeneratingCover(false)
+    }
+  }
+
+  async function handleExportPdf(artifact: Artifact) {
+    if (isExportingPdf) return
+    setIsExportingPdf(true)
+    try {
+      await downloadArtifactPdf(artifact.id)
+      toast.success('PDF downloaded.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'PDF export failed.')
+    } finally {
+      setIsExportingPdf(false)
     }
   }
 
@@ -148,33 +314,49 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
               <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide block mb-1">
                 Tone
               </label>
-              <select
-                className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              <Select
                 value={style.tone}
-                onChange={e => updateStyle({ tone: e.target.value as StyleConfig['tone'] })}
+                onValueChange={(v) => updateStyle({ tone: v as StyleConfig['tone'] })}
                 disabled={isGenerating}
               >
-                <option value="professional">Professional</option>
-                <option value="conversational">Conversational</option>
-                <option value="concise">Concise</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="professional">Professional</SelectItem>
+                  <SelectItem value="conversational">Conversational</SelectItem>
+                  <SelectItem value="concise">Concise</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide block mb-1">
                 Length
               </label>
-              <select
-                className="w-full text-sm border border-zinc-200 rounded-lg px-3 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              <Select
                 value={style.length}
-                onChange={e => updateStyle({ length: e.target.value as StyleConfig['length'] })}
+                onValueChange={(v) => updateStyle({ length: v as StyleConfig['length'] })}
                 disabled={isGenerating}
               >
-                <option value="brief">Brief</option>
-                <option value="standard">Standard</option>
-                <option value="detailed">Detailed</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="brief">Brief</SelectItem>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="detailed">Detailed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
+          {templates.length > 0 && (
+            <TemplatePicker
+              templates={templates}
+              selectedId={selectedTemplateId}
+              onSelect={setSelectedTemplateId}
+              disabled={isGenerating}
+            />
+          )}
           <div className="flex gap-2">
             <button
               className="btn btn-ghost flex-1"
@@ -200,8 +382,13 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
           <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">Tailored résumé</h2>
-              {latestResume.prompt_version_id && (
-                <p className="text-xs text-zinc-400 mt-0.5 num">{latestResume.prompt_version_id}</p>
+              {latestResume.template_id && (
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Template: {latestResume.template_id}
+                  {latestResume.prompt_version_id && (
+                    <> · <span className="num">{latestResume.prompt_version_id}</span></>
+                  )}
+                </p>
               )}
             </div>
             {latestResume.scores && (
@@ -210,12 +397,25 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
               </span>
             )}
           </div>
-          <div className="p-4">
-            <ArtifactPreview artifact={latestResume} />
+          <div className="p-4 space-y-4">
+            {latestResume.format === 'json' && latestResume.template_id ? (
+              <ResumeIframe artifactId={latestResume.id} />
+            ) : (
+              <SimpleMarkdown content={latestResume.content} />
+            )}
+            <ArtifactScoreRow artifact={latestResume} />
           </div>
           <div className="px-4 pb-4 flex gap-2">
             <button className="btn btn-ghost flex-1">Edit</button>
-            <button className="btn btn-primary flex-1">Export PDF</button>
+            {latestResume.format === 'json' && (
+              <button
+                className="btn btn-primary flex-1"
+                onClick={() => void handleExportPdf(latestResume)}
+                disabled={isExportingPdf}
+              >
+                {isExportingPdf ? 'Exporting…' : 'Export PDF'}
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -236,12 +436,14 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
               </span>
             )}
           </div>
-          <div className="p-4 text-xs text-zinc-500 leading-relaxed">
-            <ArtifactPreview artifact={latestCover} />
+          <div className="p-4 space-y-4">
+            <div className="text-xs text-zinc-500 leading-relaxed">
+              <SimpleMarkdown content={latestCover.content} />
+            </div>
+            <ArtifactScoreRow artifact={latestCover} />
           </div>
-          <div className="px-4 pb-4 flex gap-2">
-            <button className="btn btn-ghost flex-1">Edit</button>
-            <button className="btn btn-primary flex-1">Export PDF</button>
+          <div className="px-4 pb-4">
+            <button className="btn btn-ghost w-full">Edit</button>
           </div>
         </section>
       )}
@@ -261,6 +463,11 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
                 <span className={`skill-tag ${a.kind === 'resume' ? 'skill-gen' : 'skill-fe'}`}>
                   {a.kind === 'resume' ? 'Résumé' : 'Cover letter'}
                 </span>
+                {a.template_id && (
+                  <span className="text-[10px] text-zinc-400 border border-zinc-200 rounded px-1.5 py-0.5">
+                    {a.template_id}
+                  </span>
+                )}
                 <span className="text-xs text-zinc-400 num flex-1">
                   {new Date(a.created_at).toLocaleDateString('en-SG', {
                     day: 'numeric',

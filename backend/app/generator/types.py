@@ -1,4 +1,4 @@
-"""Generator domain types: style config, artifact scoring, and grounding results."""
+"""Generator domain types: style config, artifact scoring, grounding results, resume data."""
 
 from __future__ import annotations
 
@@ -59,3 +59,63 @@ class GroundednessResult(BaseModel):
 
 class GeneratedDoc(BaseModel):
     markdown: str
+
+
+# ---------------------------------------------------------------------------
+# Structured resume data model (used by template-based generation)
+# ---------------------------------------------------------------------------
+
+
+class ExperienceEntry(BaseModel):
+    title: str
+    company: str
+    location: str | None = None
+    start_date: str
+    end_date: str
+    bullets: list[str] = Field(default_factory=list)
+
+
+class EducationEntry(BaseModel):
+    degree: str
+    institution: str
+    location: str | None = None
+    year: str
+    honors: str | None = None
+    minor: str | None = None
+
+
+class ProjectEntry(BaseModel):
+    name: str
+    role: str | None = None
+    organization: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    bullets: list[str] = Field(default_factory=list)
+
+
+class SkillCategory(BaseModel):
+    category: str
+    skills: list[str] = Field(default_factory=list)
+
+
+class ResumeData(BaseModel):
+    """Structured resume content used to render HTML/PDF templates.
+
+    All fields sourced strictly from the user's experience items — the LLM
+    must not invent facts. The template layer handles all visual presentation;
+    this model is presentation-agnostic.
+    """
+
+    name: str
+    email: str
+    phone: str | None = None
+    location: str | None = None
+    linkedin: str | None = None
+    github: str | None = None
+    website: str | None = None
+
+    summary: str | None = None
+    experience: list[ExperienceEntry] = Field(default_factory=list)
+    education: list[EducationEntry] = Field(default_factory=list)
+    skills: list[SkillCategory] = Field(default_factory=list)
+    projects: list[ProjectEntry] = Field(default_factory=list)

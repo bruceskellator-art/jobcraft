@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  font-size: 9pt;
+  color: #222;
+  line-height: 1.35;
+}
+a { color: inherit; text-decoration: none; }
+
+/* Full-width tinted header */
+.header {
+  background: #d8eef5;
+  padding: 18pt 1.6cm 14pt;
+  margin-bottom: 0;
+}
+.header h1 {
+  font-size: 24pt; font-weight: 900; color: #1a3a50;
+  text-transform: uppercase; letter-spacing: 1pt; margin-bottom: 4pt;
+}
+.contact { font-size: 8pt; color: #444; display: flex; flex-wrap: wrap; gap: 12pt; }
+.contact span::before { content: "● "; color: #3b8fc4; font-size: 7pt; }
+
+.body { padding: 10pt 1.6cm 1.4cm; }
+
+section { margin-top: 8pt; }
+.section-title {
+  font-size: 8.5pt; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8pt; color: #1a3a50;
+  border-left: 3px solid #3b8fc4; padding-left: 5pt;
+  margin-bottom: 5pt;
+}
+
+/* Two-column entry layout */
+.entry { display: grid; grid-template-columns: 32% 68%; gap: 0 10pt; margin-bottom: 6pt; }
+.entry-left { padding-top: 1pt; }
+.entry-title { font-weight: 700; font-size: 9pt; color: #111; }
+.entry-dates { font-size: 8pt; color: #666; margin-top: 2pt; }
+.entry-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #3b8fc4; margin-top: 4pt;
+  display: none; /* subtle, not visible by default */
+}
+.entry-right { border-left: 1px solid #d0e4ee; padding-left: 8pt; }
+.entry-company { font-weight: 700; font-size: 9pt; color: #1a3a50; }
+.entry-location { font-size: 8pt; color: #888; margin-bottom: 2pt; }
+.entry ul { list-style: none; padding-left: 0; margin-top: 2pt; }
+.entry li { font-size: 8.5pt; padding-left: 0.9em; text-indent: -0.9em; margin-bottom: 1.5pt; }
+.entry li::before { content: "• "; color: #3b8fc4; }
+
+.edu-entry { display: grid; grid-template-columns: 32% 68%; gap: 0 10pt; margin-bottom: 5pt; }
+.edu-left { font-size: 8.5pt; font-weight: 700; color: #222; }
+.edu-right { border-left: 1px solid #d0e4ee; padding-left: 8pt; }
+.edu-degree { font-weight: 700; font-size: 9pt; }
+.edu-detail { font-size: 8pt; color: #666; }
+
+.skill-row { font-size: 8.5pt; margin-bottom: 2pt; }
+.skill-label { font-weight: 700; color: #1a3a50; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>{{ data.name }}</h1>
+  <div class="contact">
+    {% if data.location %}<span>{{ data.location }}</span>{% endif %}
+    {% if data.email %}<span>{{ data.email }}</span>{% endif %}
+    {% if data.phone %}<span>{{ data.phone }}</span>{% endif %}
+    {% if data.linkedin %}<span>{{ data.linkedin }}</span>{% endif %}
+    {% if data.github %}<span>{{ data.github }}</span>{% endif %}
+  </div>
+</div>
+
+<div class="body">
+
+{% if data.summary %}
+<section>
+  <div class="section-title">Summary</div>
+  <p style="font-size:9pt; color:#444; line-height:1.5;">{{ data.summary }}</p>
+</section>
+{% endif %}
+
+{% if data.experience %}
+<section>
+  <div class="section-title">Experience</div>
+  {% for exp in data.experience %}
+  <div class="entry">
+    <div class="entry-left">
+      <div class="entry-title">{{ exp.title }}</div>
+      <div class="entry-dates">{{ exp.start_date }}&mdash;{{ exp.end_date }}</div>
+    </div>
+    <div class="entry-right">
+      <div class="entry-company">{{ exp.company }}</div>
+      {% if exp.location %}<div class="entry-location">{{ exp.location }}</div>{% endif %}
+      <ul>
+        {% for bullet in exp.bullets %}
+        <li>{{ bullet }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if data.projects %}
+<section>
+  <div class="section-title">Projects</div>
+  {% for proj in data.projects %}
+  <div class="entry">
+    <div class="entry-left">
+      <div class="entry-title">{{ proj.role or proj.name }}</div>
+      {% if proj.start_date %}<div class="entry-dates">{{ proj.start_date }}{% if proj.end_date %}&mdash;{{ proj.end_date }}{% endif %}</div>{% endif %}
+    </div>
+    <div class="entry-right">
+      {% if proj.organization %}<div class="entry-company">{{ proj.organization }}</div>{% endif %}
+      <ul>{% for bullet in proj.bullets %}<li>{{ bullet }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if data.education %}
+<section>
+  <div class="section-title">Education</div>
+  {% for edu in data.education %}
+  <div class="edu-entry">
+    <div class="edu-left">{{ edu.year }}</div>
+    <div class="edu-right">
+      <div class="edu-degree">{{ edu.degree }}</div>
+      <div class="edu-detail">{{ edu.institution }}{% if edu.location %} · {{ edu.location }}{% endif %}{% if edu.minor %} · Minor in {{ edu.minor }}{% endif %}</div>
+      {% if edu.honors %}<div class="edu-detail">{{ edu.honors }}</div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if data.skills %}
+<section>
+  <div class="section-title">Skills</div>
+  {% for cat in data.skills %}
+  <div class="skill-row"><span class="skill-label">{{ cat.category }}:</span> {{ cat.skills | join(' | ') }}</div>
+  {% endfor %}
+</section>
+{% endif %}
+
+</div>
+</body>
+</html>

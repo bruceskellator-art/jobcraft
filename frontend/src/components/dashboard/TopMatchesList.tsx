@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CompanyLogo } from '@/components/common/CompanyLogo'
 
 type SkillVariant = 'skill-ml' | 'skill-fe' | 'skill-be' | 'skill-infra' | 'skill-gen'
 type ChipVariant = 'chip-high' | 'chip-mid' | 'chip-low'
@@ -11,9 +12,6 @@ interface SkillTag {
 interface JobMatch {
   id: string
   company: string
-  companyInitials: string
-  companyBg: string
-  companyColor: string
   title: string
   skills: SkillTag[]
   source: string
@@ -26,9 +24,6 @@ const TOP_MATCHES: JobMatch[] = [
   {
     id: 'fde',
     company: 'Stripe',
-    companyInitials: 'ST',
-    companyBg: '#ede9fe',
-    companyColor: '#5b21b6',
     title: 'Forward Deployed Engineer',
     skills: [
       { label: 'Python', variant: 'skill-be' },
@@ -43,9 +38,6 @@ const TOP_MATCHES: JobMatch[] = [
   {
     id: 'aise',
     company: 'Brainbase',
-    companyInitials: 'BD',
-    companyBg: '#fce7f3',
-    companyColor: '#be185d',
     title: 'AI Solutions Engineer',
     skills: [
       { label: 'Python', variant: 'skill-ml' },
@@ -60,9 +52,6 @@ const TOP_MATCHES: JobMatch[] = [
   {
     id: 'aie',
     company: 'Greythorn',
-    companyInitials: 'GT',
-    companyBg: '#e0e7ff',
-    companyColor: '#4338ca',
     title: 'AI Engineer (LLM Platform)',
     skills: [
       { label: 'Python', variant: 'skill-ml' },
@@ -95,12 +84,7 @@ export function TopMatchesList() {
             key={job.id}
             className="flex items-center gap-3 px-4 py-3 data-row"
           >
-            <div
-              className="logo-avatar"
-              style={{ background: job.companyBg, color: job.companyColor }}
-            >
-              {job.companyInitials}
-            </div>
+            <CompanyLogo company={job.company} size="sm" />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-zinc-800">{job.title}</div>
               <div className="flex items-center gap-1.5 mt-1">

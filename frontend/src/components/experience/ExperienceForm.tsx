@@ -9,6 +9,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import type { ExperienceItem, ExperienceKind, CreateExperiencePayload } from '@/types/experience'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const KIND_OPTIONS: ExperienceKind[] = ['work', 'project', 'education', 'skill', 'achievement']
 
@@ -86,17 +93,18 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="kind" className={labelClass}>Kind</label>
-              <select
-                id="kind"
-                name="kind"
-                value={form.kind}
-                onChange={e => handleField('kind', e.target.value)}
-                className={inputClass}
-              >
-                {KIND_OPTIONS.map(k => (
-                  <option key={k} value={k}>{k.charAt(0).toUpperCase() + k.slice(1)}</option>
-                ))}
-              </select>
+              <Select value={form.kind} onValueChange={(v) => { if (v !== null) handleField('kind', v) }}>
+                <SelectTrigger id="kind" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {KIND_OPTIONS.map(k => (
+                    <SelectItem key={k} value={k}>
+                      {k.charAt(0).toUpperCase() + k.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label htmlFor="title" className={labelClass}>Title</label>

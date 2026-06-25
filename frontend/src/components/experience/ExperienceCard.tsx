@@ -1,6 +1,6 @@
 'use client'
 
-import { PencilIcon, Trash2Icon } from 'lucide-react'
+import { GripVerticalIcon, PencilIcon, Trash2Icon } from 'lucide-react'
 import type { ExperienceItem } from '@/types/experience'
 import { getSkillVariant } from './skillTagHelper'
 
@@ -8,6 +8,8 @@ interface ExperienceCardProps {
   item: ExperienceItem
   onEdit: () => void
   onDelete: () => void
+  draggable?: boolean
+  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
 }
 
 function getLogoInitials(organization?: string): string {
@@ -29,12 +31,22 @@ function buildSubtitle(item: ExperienceItem): string {
   return parts.join(' · ')
 }
 
-export function ExperienceCard({ item, onEdit, onDelete }: ExperienceCardProps) {
+export function ExperienceCard({ item, onEdit, onDelete, draggable: isDraggable = false, dragHandleProps }: ExperienceCardProps) {
   const subtitle = buildSubtitle(item)
   const shortId = `exp_${item.id.slice(0, 4)}`
 
   return (
     <div className="data-row group px-4 py-3.5 flex items-start gap-3">
+      {isDraggable && (
+        <button
+          type="button"
+          className="flex-none mt-1 cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-400 transition-colors focus:outline-none"
+          aria-label="Drag to reorder"
+          {...dragHandleProps}
+        >
+          <GripVerticalIcon size={14} />
+        </button>
+      )}
       <span className="num text-xs text-zinc-400 w-16 flex-none pt-0.5 mt-0.5">{shortId}</span>
       {item.organization && (
         <div

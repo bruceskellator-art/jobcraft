@@ -55,6 +55,15 @@ export async function deleteExperience(id: string): Promise<void> {
   await handleResponse<void>(res)
 }
 
+export async function reorderExperience(kind: string, ids: string[]): Promise<void> {
+  const res = await fetch(`${BASE}/api/experience/reorder`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ kind, ids }),
+  })
+  await handleResponse<void>(res)
+}
+
 export interface ImportResult {
   created: ExperienceItem[]
 }
@@ -117,11 +126,12 @@ export async function runMatches(limit?: number, signal?: AbortSignal): Promise<
 
 // --- Artifacts ---
 
-import type { Artifact, StyleConfig, ArtifactKind } from '@/types/artifact'
+import type { Artifact, StyleConfig, ArtifactKind, ResumeTemplate } from '@/types/artifact'
 
 export interface GenerateArtifactPayload {
   kind: ArtifactKind
   style: StyleConfig
+  template_id?: string
 }
 
 export async function generateArtifact(
@@ -162,6 +172,45 @@ export async function uploadBaseline(file: File, signal?: AbortSignal): Promise<
     signal,
   })
   return handleResponse<Artifact>(res)
+}
+
+export async function getArtifactPreview(id: string, signal?: AbortSignal): Promise<string> {
+  const res = await fetch(`${BASE}/api/artifacts/${id}/preview`, { signal })
+  if (!res.ok) {
+    let message = res.statusText
+    try {
+      const body = await res.json() as { detail?: string }
+      message = body.detail ?? message
+    } catch { /* use statusText */ }
+    throw new ApiError(res.status, message)
+  }
+  return res.text()
+}
+
+export async function downloadArtifactPdf(id: string, filename?: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/artifacts/${id}/pdf`)
+  if (!res.ok) {
+    let message = res.statusText
+    try {
+      const body = await res.json() as { detail?: string }
+      message = body.detail ?? message
+    } catch { /* use statusText */ }
+    throw new ApiError(res.status, message)
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename ?? 'resume.pdf'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+export async function getTemplates(signal?: AbortSignal): Promise<ResumeTemplate[]> {
+  const res = await fetch(`${BASE}/api/templates`, { signal })
+  return handleResponse<ResumeTemplate[]>(res)
 }
 
 // --- Apply Queue ---
@@ -389,6 +438,40 @@ export async function listPrompts(signal?: AbortSignal): Promise<Record<string, 
 export async function getPrompt(id: string, signal?: AbortSignal): Promise<PromptDetail> {
   const res = await fetch(`${BASE}/api/admin/prompts/${id}`, { signal })
   return handleResponse<PromptDetail>(res)
+}
+
+// --- Settings: Scrape Profile ---
+
+import type { ScrapeProfileConfig, ScrapeResult } from '@/types/settings'
+
+export async function getScrapeProfile(signal?: AbortSignal): Promise<ScrapeProfileConfig> {
+  const res = await fetch(`${BASE}/api/settings/scrape-profile`, { signal })
+  return handleResponse<ScrapeProfileConfig>(res)
+}
+
+export async function putScrapeProfile(config: ScrapeProfileConfig): Promise<ScrapeProfileConfig> {
+  const res = await fetch(`${BASE}/api/settings/scrape-profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  return handleResponse<ScrapeProfileConfig>(res)
+}
+
+export async function runScrape(profile: ScrapeProfileConfig): Promise<ScrapeResult> {
+  const res = await fetch(`${BASE}/api/jobs/scrape`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      linkedin_keywords: profile.linkedin_keywords,
+      mcf_keywords: profile.mcf_keywords,
+      greenhouse_boards: profile.greenhouse_boards,
+      lever_companies: profile.lever_companies,
+      filters: { posted_within_days: profile.posted_within_days },
+      extract: profile.extract,
+    }),
+  })
+  return handleResponse<ScrapeResult>(res)
 }
 
 // --- Email sync ---

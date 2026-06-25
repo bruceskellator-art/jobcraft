@@ -42,3 +42,6 @@ tests/cassettes/
 # Claude Code local files (machine-specific)
 .claude/settings.local.json
 .claude/worktrees/
+
+# redundant local scratch copy of resume template previews
+/resume-templates/

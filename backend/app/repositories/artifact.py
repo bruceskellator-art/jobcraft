@@ -32,6 +32,7 @@ class ArtifactRepository:
         scores: dict | None = None,
         prompt_version_id: uuid.UUID | None = None,
         generation_run_id: uuid.UUID | None = None,
+        template_id: str | None = None,
     ) -> Artifact:
         """Persist a new Artifact and flush to the session.
 
@@ -49,6 +50,7 @@ class ArtifactRepository:
             scores=scores,
             prompt_version_id=prompt_version_id,
             generation_run_id=generation_run_id,
+            template_id=template_id,
         )
         self._session.add(artifact)
         await self._session.flush()

@@ -6,10 +6,9 @@ import { Sidebar } from './Sidebar'
 type NavPage =
   | 'dashboard'
   | 'jobs'
-  | 'apply-queue'
   | 'applications'
-  | 'documents'
-  | 'experience'
+  | 'activity'
+  | 'workspace'
   | 'settings'
   | 'admin-calls'
   | 'admin-evals'
@@ -18,10 +17,17 @@ type NavPage =
 function getActivePage(pathname: string): NavPage {
   if (pathname === '/') return 'dashboard'
   if (pathname.startsWith('/jobs')) return 'jobs'
-  if (pathname.startsWith('/apply-queue')) return 'apply-queue'
   if (pathname.startsWith('/applications')) return 'applications'
-  if (pathname.startsWith('/documents')) return 'documents'
-  if (pathname.startsWith('/experience')) return 'experience'
+  // Apply Queue was consolidated into Activity
+  if (pathname.startsWith('/activity') || pathname.startsWith('/apply-queue')) return 'activity'
+  // Experience + Documents were consolidated into Workspace
+  if (
+    pathname.startsWith('/workspace') ||
+    pathname.startsWith('/experience') ||
+    pathname.startsWith('/documents')
+  ) {
+    return 'workspace'
+  }
   if (pathname.startsWith('/settings')) return 'settings'
   if (pathname.startsWith('/admin/calls')) return 'admin-calls'
   if (pathname.startsWith('/admin/evals')) return 'admin-evals'

@@ -5,6 +5,13 @@ import type { LlmCall, CallCostResponse } from '@/types/observability'
 import { listAdminCalls, getCallCost } from '@/lib/api'
 import { CallRow } from '@/components/admin/CallRow'
 import { StatTile } from '@/components/dashboard/StatTile'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 const LIMIT_OPTIONS = [25, 50, 100, 200]
 
@@ -116,17 +123,18 @@ export default function AdminCallsPage() {
             value={modelFilter}
             onChange={(e) => setModelFilter(e.target.value)}
           />
-          <select
-            className="text-xs border border-zinc-200 rounded-lg px-2 py-1.5 text-zinc-600"
-            value={limit}
-            onChange={(e) => setLimit(Number(e.target.value))}
-          >
-            {LIMIT_OPTIONS.map((l) => (
-              <option key={l} value={l}>
-                Last {l}
-              </option>
-            ))}
-          </select>
+          <Select value={String(limit)} onValueChange={(v) => setLimit(Number(v))}>
+            <SelectTrigger size="sm" className="text-xs text-zinc-600">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LIMIT_OPTIONS.map((l) => (
+                <SelectItem key={l} value={String(l)}>
+                  Last {l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </header>
 

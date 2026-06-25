@@ -3,6 +3,9 @@
 Prompt ensure_* helpers use the savepoint pattern from matcher/service.py:
 speculative insert inside begin_nested(); on IntegrityError roll back only
 the savepoint and re-select the already-inserted row.
+
+Resume generation now outputs structured ResumeData JSON (not Markdown).
+Cover letter generation still outputs Markdown.
 """
 
 from __future__ import annotations
@@ -18,16 +21,15 @@ from app.db.models.experience_item import ExperienceItem
 from app.db.models.job_posting import JobPosting
 from app.db.models.match import Match
 from app.db.models.prompt_version import PromptVersion
-from app.embeddings.base import EmbeddingClient
 from app.generator.types import (
     ArtifactScores,
     GeneratedDoc,
     GroundednessResult,
+    ResumeData,
     StyleConfig,
 )
 from app.llm.client import LLMClient
-from app.services.embed_pipeline import COLLECTION_USER_EXPERIENCE, _compose_jd_text
-from app.vectorstore.base import VectorStore
+from app.services.embed_pipeline import _compose_jd_text
 
 logger = logging.getLogger(__name__)
 
@@ -35,19 +37,66 @@ logger = logging.getLogger(__name__)
 # Prompt constants
 # ---------------------------------------------------------------------------
 
-_RESUME_PROMPT_NAME = "generate_resume_v1"
-_RESUME_PROMPT_VERSION = 1
+_RESUME_PROMPT_NAME = "generate_resume_v2"
+_RESUME_PROMPT_VERSION = 2
 _RESUME_PROMPT_MODEL = "claude-sonnet-4-6"
 _RESUME_PROMPT_TEMPERATURE = 0.3
 _RESUME_PROMPT_TEMPLATE = """\
-You are a professional resume writer. Your job is to produce a tailored, \
-grounded Markdown resume.
+You are a professional resume writer producing structured JSON resume data.
 
 STRICT RULES:
-- Use ONLY facts stated in <experience>. Never invent roles, dates, skills, or metrics.
-- Tailor every bullet's framing toward the requirements in <job>.
-- Return valid Markdown only. No prose outside the document. No code fences.
-- Tone: {{ tone }}. Target length: {{ length }}.
+- Use ONLY facts stated in <experience>. Never invent roles, companies, dates, skills, or metrics.
+- Tailor every bullet toward the requirements in <job>.
+- Extract name, email, phone, location, linkedin, github from the experience items.
+- Return ONLY a valid JSON object — no prose, no markdown fences.
+- Tone: {{ tone }}.
+- Each bullet must start with a strong action verb and be specific and quantified where possible.
+
+Return an object with this exact schema:
+{
+  "name": "<full name from experience>",
+  "email": "<email from experience>",
+  "phone": "<phone or null>",
+  "location": "<city, country or null>",
+  "linkedin": "<handle e.g. in/username or null>",
+  "github": "<handle e.g. github.com/user or null>",
+  "website": "<URL or null>",
+  "summary": "<2-3 sentence professional summary tailored to the job>",
+  "experience": [
+    {
+      "title": "<job title>",
+      "company": "<company name>",
+      "location": "<city, state/country or null>",
+      "start_date": "<e.g. May 2015>",
+      "end_date": "<e.g. Present or November 2015>",
+      "bullets": ["<bullet>", ...]
+    }
+  ],
+  "education": [
+    {
+      "degree": "<degree>",
+      "institution": "<school>",
+      "location": "<city or null>",
+      "year": "<graduation year>",
+      "honors": "<honors or null>",
+      "minor": "<minor or null>"
+    }
+  ],
+  "skills": [
+    { "category": "<category>", "skills": ["<skill>", ...] }
+  ],
+  "projects": [
+    {
+      "name": "<project>",
+      "role": "<role or null>",
+      "organization": "<org or null>",
+      "start_date": "<date or null>",
+      "end_date": "<date or null>",
+      "bullets": ["<bullet>", ...]
+    }
+  ]
+}
+
 {% if emphasis %}- Emphasise these areas: {{ emphasis }}.{% endif %}
 
 <experience>
@@ -130,7 +179,7 @@ Return ONLY a JSON object — no prose, no fences — matching this schema exact
 
 
 async def ensure_resume_prompt(session: AsyncSession) -> PromptVersion:
-    """Return (or create) the active generate_resume_v1 PromptVersion."""
+    """Return (or create) the active generate_resume_v2 PromptVersion."""
     result = await session.execute(
         select(PromptVersion).where(
             PromptVersion.name == _RESUME_PROMPT_NAME,
@@ -238,75 +287,19 @@ async def ensure_groundedness_prompt(session: AsyncSession) -> PromptVersion:
 
 
 # ---------------------------------------------------------------------------
-# RAG retrieval
+# Experience loading
 # ---------------------------------------------------------------------------
 
 
-async def _retrieve_relevant_experience(
+async def _load_all_experience(
     session: AsyncSession,
-    embed: EmbeddingClient,
-    store: VectorStore,
     user_id: uuid.UUID,
-    job: JobPosting,
-    top_n: int = 12,
 ) -> list[ExperienceItem]:
-    """RAG: retrieve the most relevant experience items for a job.
-
-    Embeds the JD, vector-searches the user's indexed corpus, then loads
-    the matching ExperienceItems by id in rank order.
-
-    Falls back to ALL experience items if:
-    - the vector store has no indexed vectors for this user, OR
-    - fewer than top_n items are found in the store.
-    """
-    jd_text = _compose_jd_text(job)
-    jd_vectors = await embed.embed([jd_text])
-    jd_vec = jd_vectors[0]
-
-    scored = await store.search(
-        COLLECTION_USER_EXPERIENCE,
-        jd_vec,
-        top_k=top_n,
-        payload_filter={"user_id": str(user_id)},
-    )
-
-    if not scored:
-        logger.debug(
-            "_retrieve_relevant_experience: no vectors for user %s, loading all items",
-            user_id,
-        )
-        result = await session.execute(
-            select(ExperienceItem).where(ExperienceItem.user_id == user_id)
-        )
-        return list(result.scalars().all())
-
-    # Load items in rank order, skipping any ids not found in the DB.
-    ids_in_rank = [uuid.UUID(sp.id) for sp in scored]
+    """Load all experience items for a user from the database."""
     result = await session.execute(
-        select(ExperienceItem).where(ExperienceItem.id.in_(ids_in_rank))
+        select(ExperienceItem).where(ExperienceItem.user_id == user_id)
     )
-    by_id = {item.id: item for item in result.scalars().all()}
-    retrieved = [by_id[i] for i in ids_in_rank if i in by_id]
-
-    # If every vector ID was stale (deleted items), but the user still has
-    # experience items in the DB, fall back to a full scan so generation
-    # never silently runs with zero context.
-    if not retrieved:
-        result = await session.execute(
-            select(ExperienceItem).where(ExperienceItem.user_id == user_id)
-        )
-        all_items = list(result.scalars().all())
-        if all_items:
-            logger.warning(
-                "_retrieve_relevant_experience: all %d vector ID(s) were stale "
-                "for user %s; falling back to full scan (%d items)",
-                len(ids_in_rank),
-                user_id,
-                len(all_items),
-            )
-            return all_items
-
-    return retrieved
+    return list(result.scalars().all())
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +315,18 @@ def _format_experience_items(items: list[ExperienceItem]) -> str:
     )
 
 
+def _resume_data_to_text(data: ResumeData) -> str:
+    """Flatten ResumeData to plain text for groundedness checking and scoring."""
+    lines: list[str] = []
+    if data.summary:
+        lines.append(data.summary)
+    for exp in data.experience:
+        lines.extend(exp.bullets)
+    for proj in data.projects:
+        lines.extend(proj.bullets)
+    return "\n".join(f"- {line}" for line in lines)
+
+
 # ---------------------------------------------------------------------------
 # Generation
 # ---------------------------------------------------------------------------
@@ -330,25 +335,16 @@ def _format_experience_items(items: list[ExperienceItem]) -> str:
 async def generate_resume(
     session: AsyncSession,
     llm: LLMClient,
-    embed: EmbeddingClient,
-    store: VectorStore,
     user_id: uuid.UUID,
     job: JobPosting,
     style: StyleConfig,
-    *,
-    items: list[ExperienceItem] | None = None,
-) -> tuple[str, list[ExperienceItem]]:
-    """Generate a grounded Markdown resume tailored to a job posting.
+) -> tuple[ResumeData, list[ExperienceItem]]:
+    """Generate a grounded structured resume tailored to a job posting.
 
-    Returns (markdown, experience_items_used).  The caller can reuse the
-    returned items list for groundedness checking so the same subset is used
-    for both generation and verification.
-
-    If ``items`` is provided the RAG retrieval step is skipped; otherwise
-    items are retrieved automatically.
+    Returns (ResumeData, experience_items_used). The caller can reuse the
+    returned items list for groundedness checking.
     """
-    if items is None:
-        items = await _retrieve_relevant_experience(session, embed, store, user_id, job)
+    items = await _load_all_experience(session, user_id)
     prompt = await ensure_resume_prompt(session)
 
     response = await llm.complete(
@@ -357,38 +353,27 @@ async def generate_resume(
             "experience_items": _format_experience_items(items),
             "job_description": _compose_jd_text(job),
             "tone": style.tone,
-            "length": style.length,
             "emphasis": ", ".join(style.emphasis) if style.emphasis else "",
         },
-        response_model=GeneratedDoc,
+        response_model=ResumeData,
     )
     if response.parsed is None:
         raise RuntimeError("generate_resume: LLM returned no parsed result")
-    return response.parsed.markdown, items
+    return response.parsed, items
 
 
 async def generate_cover_letter(
     session: AsyncSession,
     llm: LLMClient,
-    embed: EmbeddingClient,
-    store: VectorStore,
     user_id: uuid.UUID,
     job: JobPosting,
     style: StyleConfig,
-    *,
-    items: list[ExperienceItem] | None = None,
 ) -> tuple[str, list[ExperienceItem]]:
     """Generate a grounded Markdown cover letter tailored to a job posting.
 
-    Returns (markdown, experience_items_used).  The caller can reuse the
-    returned items list for groundedness checking so the same subset is used
-    for both generation and verification.
-
-    If ``items`` is provided the RAG retrieval step is skipped; otherwise
-    items are retrieved automatically.
+    Returns (markdown, experience_items_used).
     """
-    if items is None:
-        items = await _retrieve_relevant_experience(session, embed, store, user_id, job)
+    items = await _load_all_experience(session, user_id)
     prompt = await ensure_cover_letter_prompt(session)
 
     extracted = job.extracted or {}
@@ -419,20 +404,16 @@ async def generate_cover_letter(
 async def check_groundedness(
     session: AsyncSession,
     llm: LLMClient,
-    markdown: str,
+    document_text: str,
     experience_items: list[ExperienceItem],
 ) -> GroundednessResult:
-    """LLM-as-judge: map each resume claim to an experience item or flag it.
-
-    Ungrounded claims are surfaced in GroundednessResult.ungrounded so the
-    UI can highlight them for the user to review or remove.
-    """
+    """LLM-as-judge: map each resume claim to an experience item or flag it."""
     prompt = await ensure_groundedness_prompt(session)
 
     response = await llm.complete(
         prompt.id,
         inputs={
-            "document": markdown,
+            "document": document_text,
             "experience_items": _format_experience_items(experience_items),
         },
         response_model=GroundednessResult,
@@ -456,20 +437,13 @@ async def check_groundedness(
 async def score_artifact(
     session: AsyncSession,
     llm: LLMClient,
-    markdown: str,
+    document_text: str,
     job: JobPosting,
     groundedness: GroundednessResult,
     match: Match | None,
     length: str = "one_page",
 ) -> ArtifactScores:
-    """Compose ArtifactScores from deterministic heuristics + LLM groundedness.
-
-    ``length`` should match the StyleConfig used for generation so that
-    score_clarity uses the correct word-count target.
-
-    Imports scoring helpers from app.generator.scoring to keep this file
-    under 300 lines and allow independent unit testing of the pure functions.
-    """
+    """Compose ArtifactScores from deterministic heuristics + LLM groundedness."""
     from app.generator.scoring import compose_artifact_scores
 
-    return compose_artifact_scores(markdown, job, groundedness, match, length)
+    return compose_artifact_scores(document_text, job, groundedness, match, length)

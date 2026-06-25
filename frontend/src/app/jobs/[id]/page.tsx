@@ -10,38 +10,12 @@ import { getJob, getJobMatch } from '@/lib/api'
 import { MatchBreakdown } from '@/components/jobs/MatchBreakdown'
 import { GenerationPanel } from '@/components/jobs/GenerationPanel'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
+import { CompanyLogo } from '@/components/common/CompanyLogo'
 
 type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'success'; job: JobPosting; match: MatchRead | null }
-
-const PALETTES = [
-  { bg: '#ede9fe', color: '#5b21b6' },
-  { bg: '#fce7f3', color: '#be185d' },
-  { bg: '#e0e7ff', color: '#4338ca' },
-  { bg: '#d1fae5', color: '#065f46' },
-  { bg: '#ffedd5', color: '#c2410c' },
-  { bg: '#fef9c3', color: '#92400e' },
-  { bg: '#e0f2fe', color: '#075985' },
-  { bg: '#fce7f3', color: '#9d174d' },
-]
-
-function getLogoColors(company: string): { bg: string; color: string } {
-  let hash = 0
-  for (let i = 0; i < company.length; i++) {
-    hash = (hash * 31 + company.charCodeAt(i)) >>> 0
-  }
-  return PALETTES[hash % PALETTES.length]
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(w => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
 
 function sourceLabel(source: string): string {
   const MAP: Record<string, string> = {
@@ -154,9 +128,6 @@ export default function JobDetailPage() {
   const salaryText = formatSalary(job.extracted?.salary_min_usd, job.extracted?.salary_max_usd)
   const locationText = [displayLocation, remotePolicy].filter(Boolean).join(' · ')
 
-  const logoColors = getLogoColors(displayCompany)
-  const initials = getInitials(displayCompany)
-
   return (
     <>
       <Toaster />
@@ -168,12 +139,7 @@ export default function JobDetailPage() {
             ← Jobs
           </Link>
           <div className="flex items-center gap-2.5">
-            <div
-              className="logo-avatar"
-              style={{ background: logoColors.bg, color: logoColors.color }}
-            >
-              {initials}
-            </div>
+            <CompanyLogo company={displayCompany} size="md" />
             <div>
               <h1 className="text-sm font-semibold">{displayTitle}</h1>
               <p className="text-xs text-zinc-400">

@@ -1,12 +1,12 @@
 import Link from 'next/link'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 
 type NavPage =
   | 'dashboard'
   | 'jobs'
-  | 'apply-queue'
   | 'applications'
-  | 'documents'
-  | 'experience'
+  | 'activity'
+  | 'workspace'
   | 'settings'
   | 'admin-calls'
   | 'admin-evals'
@@ -41,13 +41,6 @@ const NAV: NavEntry[] = [
       'M20 7h-4V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Zm-6 0h-4V5h4v2Z',
   },
   {
-    page: 'apply-queue',
-    href: '/apply-queue',
-    label: 'Apply Queue',
-    badge: 'queue',
-    iconPath: 'm9 16.2-3.5-3.5L4 14.2 9 19l11-11-1.4-1.4z',
-  },
-  {
     page: 'applications',
     href: '/applications',
     label: 'Applications',
@@ -55,18 +48,18 @@ const NAV: NavEntry[] = [
       'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm2 16H8v-2h8v2Zm0-4H8v-2h8v2Zm-3-5V3.5L18.5 9H13Z',
   },
   {
-    page: 'documents',
-    href: '/documents',
-    label: 'Documents',
-    iconPath:
-      'M6 2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6H6Zm7 1.5L18.5 9H13V3.5ZM8 13h8v1.5H8V13Zm0 3h8v1.5H8V16Z',
+    page: 'activity',
+    href: '/activity',
+    label: 'Activity',
+    badge: 'queue',
+    iconPath: 'M13 2 3 14h7l-1 8 10-12h-7l1-8Z',
   },
   {
-    page: 'experience',
-    href: '/experience',
-    label: 'Experience',
+    page: 'workspace',
+    href: '/workspace',
+    label: 'Workspace',
     iconPath:
-      'M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5Z',
+      'M12 2 2 7l10 5 10-5-10-5Zm0 7.2L4.2 5.5 12 1.8l7.8 3.7L12 9.2ZM2 12l10 5 10-5-1.9-1 -8.1 4-8.1-4L2 12Zm0 5 10 5 10-5-1.9-1-8.1 4-8.1-4L2 17Z',
   },
   {
     page: 'settings',
@@ -111,8 +104,8 @@ export function Sidebar({ activePage }: SidebarProps) {
       {/* Logo + brand */}
       <div className="px-3 py-4 flex items-center gap-2.5 border-b border-zinc-200">
         <div
-          className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center shadow-sm"
-          style={{ boxShadow: '0 1px 2px rgba(79,70,229,.35)', background: '#4f46e5' }}
+          className="w-8 h-8 rounded-lg text-white grid place-items-center shadow-sm"
+          style={{ boxShadow: '0 1px 2px rgba(3,105,161,.35)', background: 'var(--primary)' }}
         >
           <svg
             viewBox="0 0 24 24"
@@ -182,6 +175,9 @@ export function Sidebar({ activePage }: SidebarProps) {
             Autopilot:{' '}
             <span className="text-emerald-600 font-medium">selective</span>
           </div>
+        </div>
+        <div className="ml-auto">
+          <ThemeToggle />
         </div>
       </div>
     </div>

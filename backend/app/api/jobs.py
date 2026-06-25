@@ -69,16 +69,19 @@ async def get_job(
 async def scrape_jobs(
     body: ScrapeRequest,
     session: AsyncSession = Depends(get_session),  # noqa: B008
-    source_factory: Callable[[list[str], list[str]], list[JobSource]] = Depends(get_source_factory),  # noqa: B008
+    source_factory: Callable[[list[str], list[str], list[str]], list[JobSource]] = Depends(get_source_factory),  # noqa: B008
     llm: LLMClient = Depends(get_llm_client),  # noqa: B008
 ) -> ScrapeResponse:
-    """Trigger a scrape across Greenhouse and/or Lever sources.
+    """Trigger a scrape across Greenhouse, Lever, and/or MyCareersFuture sources.
 
     Builds JobSource instances via the injected source_factory so tests
     can override it to inject fake sources with no network calls.
     Each owned adapter's HTTP client is closed in a finally block.
     """
-    sources = source_factory(body.greenhouse_boards, body.lever_companies)
+    sources = source_factory(
+        body.greenhouse_boards, body.lever_companies,
+        body.mcf_keywords, body.linkedin_keywords,
+    )
     try:
         created_postings, logs = await run_scrape(
             session=session,
@@ -103,6 +106,7 @@ async def scrape_jobs(
                 total_fetched=log.total_fetched,
                 total_failed=log.total_failed,
                 total_new=log.total_new,
+                error=log.error,
             )
             for log in logs
         ],

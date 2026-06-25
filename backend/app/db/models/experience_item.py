@@ -36,6 +36,7 @@ class ExperienceItem(Base):
         default=list,
         server_default="{}",
     )
+    sort_order: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     metadata_: Mapped[dict | None] = mapped_column(
         "metadata",
         JSONB().with_variant(sa.JSON(), "sqlite"),
