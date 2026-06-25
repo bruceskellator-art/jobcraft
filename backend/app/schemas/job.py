@@ -34,6 +34,7 @@ class JobPostingRead(BaseModel):
     source_url: str
     source_id: str | None
     company: str
+    company_logo_url: str | None = None
     title: str
     location: str | None
     remote_policy: str | None

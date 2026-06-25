@@ -42,6 +42,9 @@ _COMPANY_RE = re.compile(r'class="[^"]*hidden-nested-link[^"]*"[^>]*>\s*(.*?)\s*
 _LOCATION_RE = re.compile(r'class="job-search-card__location"[^>]*>\s*(.*?)\s*</span>', re.DOTALL)
 _DATE_RE = re.compile(r'datetime="(\d{4}-\d{2}-\d{2})"')
 _DESC_RE = re.compile(r'<div class="show-more-less-html__markup[^"]*"[^>]*>(.*?)</div>', re.DOTALL)
+# Company logo in the search card. LinkedIn lazy-loads via data-delayed-url and
+# falls back to src; both point at media.licdn.com. Match whichever comes first.
+_LOGO_RE = re.compile(r'(?:data-delayed-url|src)="(https://media\.licdn\.com/[^"]+)"')
 
 
 def _is_retryable(exc: BaseException) -> bool:
@@ -204,6 +207,9 @@ class LinkedInSource:
         location_m = _LOCATION_RE.search(item_html)
         location = _strip_html(location_m.group(1)) if location_m else "Singapore"
 
+        logo_m = _LOGO_RE.search(item_html)
+        logo_url = logo_m.group(1) if logo_m else None
+
         date_m = _DATE_RE.search(item_html)
         posted_at: datetime | None = None
         if date_m:
@@ -229,6 +235,7 @@ class LinkedInSource:
             location=location,
             remote_policy=None,
             raw_content="\n\n".join(raw_parts),
+            logo_url=logo_url,
         )
 
         if not _passes_filters(posting, filters):

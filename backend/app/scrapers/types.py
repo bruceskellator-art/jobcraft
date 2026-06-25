@@ -25,6 +25,7 @@ class RawJobPosting:
     location: str | None
     remote_policy: str | None
     raw_content: str
+    logo_url: str | None = None
 
 
 @dataclass(frozen=True)

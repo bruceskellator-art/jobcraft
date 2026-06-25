@@ -115,7 +115,7 @@ async def match_client(session: AsyncSession):
         return llm_client
 
     def _fake_source_factory():
-        def _build(greenhouse_boards, lever_companies):
+        def _build(greenhouse_boards, lever_companies, mcf_keywords=None, linkedin_keywords=None):
             sources = []
             for board in greenhouse_boards:
                 sources.append(_FakeSource(f"greenhouse:{board}", [_RAW_JOB]))

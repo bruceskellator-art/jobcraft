@@ -147,6 +147,7 @@ class JobRepository:
             source_url=raw.source_url,
             source_id=raw.source_id,
             company=raw.company,
+            company_logo_url=raw.logo_url,
             title=raw.title,
             location=raw.location,
             remote_policy=raw.remote_policy,

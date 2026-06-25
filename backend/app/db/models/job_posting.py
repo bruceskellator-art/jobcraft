@@ -20,6 +20,7 @@ class JobPosting(Base):
     source_url: Mapped[str] = mapped_column(sa.Text, nullable=False)
     source_id: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     company: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    company_logo_url: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     title: Mapped[str] = mapped_column(sa.Text, nullable=False)
     location: Mapped[str | None] = mapped_column(sa.Text, nullable=True)
     remote_policy: Mapped[str | None] = mapped_column(sa.Text, nullable=True)

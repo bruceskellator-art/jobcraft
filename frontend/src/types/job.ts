@@ -19,6 +19,7 @@ export interface JobPosting {
   source_url: string
   source_id?: string
   company: string
+  company_logo_url?: string | null
   title: string
   location?: string
   remote_policy?: string

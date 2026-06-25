@@ -2,6 +2,7 @@
 
 import { ThemeProvider as NextThemesProvider } from 'next-themes'
 import type { ComponentProps } from 'react'
+import { ThemeSync } from './ThemeSync'
 
 /**
  * App-wide theme provider (next-themes).
@@ -11,5 +12,10 @@ import type { ComponentProps } from 'react'
  * first paint — no flash of the wrong theme on load.
  */
 export function ThemeProvider({ children, ...props }: ComponentProps<typeof NextThemesProvider>) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
+  return (
+    <NextThemesProvider {...props}>
+      <ThemeSync />
+      {children}
+    </NextThemesProvider>
+  )
 }

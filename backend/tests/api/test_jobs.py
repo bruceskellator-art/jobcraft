@@ -83,7 +83,12 @@ async def client(session: AsyncSession) -> AsyncClient:  # type: ignore[misc]
     async def _override_session():  # type: ignore[return]
         yield session
 
-    def _fake_factory(greenhouse_boards: list[str], lever_companies: list[str]):
+    def _fake_factory(
+        greenhouse_boards: list[str],
+        lever_companies: list[str],
+        mcf_keywords: list[str] | None = None,
+        linkedin_keywords: list[str] | None = None,
+    ):
         sources = []
         for board in greenhouse_boards:
             sources.append(_FakeSource(f"greenhouse:{board}", [_RAW_GREENHOUSE]))

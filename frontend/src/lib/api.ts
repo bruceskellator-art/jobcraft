@@ -449,6 +449,28 @@ export async function getScrapeProfile(signal?: AbortSignal): Promise<ScrapeProf
   return handleResponse<ScrapeProfileConfig>(res)
 }
 
+// --- Settings: UI Preferences (theme persistence across devices) ---
+
+export type ThemePreference = 'light' | 'dark' | 'system'
+
+export interface UiPrefs {
+  theme: ThemePreference
+}
+
+export async function getUiPrefs(signal?: AbortSignal): Promise<UiPrefs> {
+  const res = await fetch(`${BASE}/api/settings/ui-prefs`, { signal })
+  return handleResponse<UiPrefs>(res)
+}
+
+export async function putUiPrefs(prefs: UiPrefs): Promise<UiPrefs> {
+  const res = await fetch(`${BASE}/api/settings/ui-prefs`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(prefs),
+  })
+  return handleResponse<UiPrefs>(res)
+}
+
 export async function putScrapeProfile(config: ScrapeProfileConfig): Promise<ScrapeProfileConfig> {
   const res = await fetch(`${BASE}/api/settings/scrape-profile`, {
     method: 'PUT',

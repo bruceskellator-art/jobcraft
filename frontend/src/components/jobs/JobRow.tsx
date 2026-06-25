@@ -88,7 +88,7 @@ export function JobRow({ job }: JobRowProps) {
       {/* Company */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <CompanyLogo company={displayCompany} size="sm" />
+          <CompanyLogo company={displayCompany} logoUrl={job.company_logo_url} size="sm" />
           <span className="text-sm font-medium text-foreground">{displayCompany}</span>
         </div>
       </td>

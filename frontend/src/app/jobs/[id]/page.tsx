@@ -139,7 +139,7 @@ export default function JobDetailPage() {
             ← Jobs
           </Link>
           <div className="flex items-center gap-2.5">
-            <CompanyLogo company={displayCompany} size="md" />
+            <CompanyLogo company={displayCompany} logoUrl={job.company_logo_url} size="md" />
             <div>
               <h1 className="text-sm font-semibold">{displayTitle}</h1>
               <p className="text-xs text-muted-foreground">
