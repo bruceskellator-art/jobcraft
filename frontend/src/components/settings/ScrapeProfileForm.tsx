@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { ScrapeProfileConfig, ScrapeResult } from '@/types/settings'
+import type { ScrapeProfileConfig } from '@/types/settings'
 
 interface TagInputProps {
   label: string
@@ -66,23 +66,20 @@ function TagInput({ label, hint, values, onChange }: TagInputProps) {
 interface ScrapeProfileFormProps {
   initial: ScrapeProfileConfig
   onSave: (config: ScrapeProfileConfig) => Promise<void>
-  onRun: (config: ScrapeProfileConfig) => Promise<ScrapeResult>
+  onRun: (config: ScrapeProfileConfig) => Promise<void>
   isSaving: boolean
   isRunning: boolean
 }
 
 export function ScrapeProfileForm({ initial, onSave, onRun, isSaving, isRunning }: ScrapeProfileFormProps) {
   const [config, setConfig] = useState<ScrapeProfileConfig>(initial)
-  const [lastResult, setLastResult] = useState<ScrapeResult | null>(null)
 
   function update<K extends keyof ScrapeProfileConfig>(key: K, value: ScrapeProfileConfig[K]) {
     setConfig(prev => ({ ...prev, [key]: value }))
   }
 
   async function handleRun() {
-    setLastResult(null)
-    const result = await onRun(config)
-    setLastResult(result)
+    await onRun(config)
   }
 
   return (
@@ -164,45 +161,9 @@ export function ScrapeProfileForm({ initial, onSave, onRun, isSaving, isRunning 
         </button>
       </div>
 
-      {lastResult && (
-        <div className="mt-2 border border-border rounded-lg overflow-hidden">
-          <div className="px-3 py-2 bg-muted border-b border-border flex items-center justify-between">
-            <span className="text-xs font-medium text-foreground">Last run — {lastResult.created} new jobs</span>
-          </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-muted-foreground border-b border-border">
-                <th className="px-3 py-2 font-medium">Source</th>
-                <th className="px-3 py-2 font-medium text-right">Listed</th>
-                <th className="px-3 py-2 font-medium text-right">New</th>
-                <th className="px-3 py-2 font-medium text-right">Failed</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {lastResult.runs.flatMap(r => {
-                const rows = [
-                  <tr key={r.source}>
-                    <td className="px-3 py-2 text-foreground font-medium">{r.source}</td>
-                    <td className="px-3 py-2 text-right text-muted-foreground">{r.total_listed}</td>
-                    <td className="px-3 py-2 text-right font-medium text-emerald-600">{r.total_new}</td>
-                    <td className="px-3 py-2 text-right text-rose-500">{r.total_failed > 0 ? r.total_failed : '—'}</td>
-                  </tr>,
-                ]
-                if (r.error) {
-                  rows.push(
-                    <tr key={`${r.source}-err`}>
-                      <td colSpan={4} className="px-3 pb-2 text-rose-500 text-xs">
-                        Error: {r.error}
-                      </td>
-                    </tr>
-                  )
-                }
-                return rows
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <p className="text-xs text-muted-foreground pt-1">
+        Scraping runs in the background — watch live progress on the Activity page.
+      </p>
     </div>
   )
 }

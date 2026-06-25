@@ -2,6 +2,7 @@
 
 import { Toaster } from '@/components/ui/sonner'
 import { ApplyQueueView } from '@/components/apply/ApplyQueueView'
+import { ScrapingRuns } from '@/components/activity/ScrapingRuns'
 
 export default function ActivityPage() {
   return (
@@ -23,15 +24,12 @@ export default function ActivityPage() {
           <ApplyQueueView />
         </section>
 
-        {/* Scraping — placeholder until background scrape lands (Wave 3) */}
+        {/* Scraping — live background scrape runs */}
         <section>
           <h2 className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground px-1 mb-2">
             Scraping
           </h2>
-          <div className="bg-card border border-border rounded-xl p-10 empty">
-            Live scrape progress will appear here once background scraping lands. For now,
-            run a scrape from Settings — it reports a per-source breakdown when it finishes.
-          </div>
+          <ScrapingRuns />
         </section>
       </div>
     </>

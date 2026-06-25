@@ -444,6 +444,34 @@ export async function getPrompt(id: string, signal?: AbortSignal): Promise<Promp
 
 import type { ScrapeProfileConfig, ScrapeResult } from '@/types/settings'
 
+export type ScrapeRunStatus = 'pending' | 'running' | 'succeeded' | 'failed'
+
+export interface ScrapeRunView {
+  id: string
+  status: ScrapeRunStatus
+  request: {
+    greenhouse_boards?: string[]
+    lever_companies?: string[]
+    mcf_keywords?: string[]
+    linkedin_keywords?: string[]
+    extract?: boolean
+    filters?: { posted_within_days?: number }
+  } | null
+  total_created: number
+  runs: Array<{
+    source: string
+    total_listed: number
+    total_fetched: number
+    total_failed: number
+    total_new: number
+    error?: string | null
+  }> | null
+  error: string | null
+  created_at: string | null
+  started_at: string | null
+  finished_at: string | null
+}
+
 export async function getScrapeProfile(signal?: AbortSignal): Promise<ScrapeProfileConfig> {
   const res = await fetch(`${BASE}/api/settings/scrape-profile`, { signal })
   return handleResponse<ScrapeProfileConfig>(res)
@@ -494,6 +522,27 @@ export async function runScrape(profile: ScrapeProfileConfig): Promise<ScrapeRes
     }),
   })
   return handleResponse<ScrapeResult>(res)
+}
+
+export async function enqueueScrape(profile: ScrapeProfileConfig): Promise<ScrapeRunView> {
+  const res = await fetch(`${BASE}/api/jobs/scrape/runs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      linkedin_keywords: profile.linkedin_keywords,
+      mcf_keywords: profile.mcf_keywords,
+      greenhouse_boards: profile.greenhouse_boards,
+      lever_companies: profile.lever_companies,
+      filters: { posted_within_days: profile.posted_within_days },
+      extract: profile.extract,
+    }),
+  })
+  return handleResponse<ScrapeRunView>(res)
+}
+
+export async function listScrapeRuns(signal?: AbortSignal): Promise<ScrapeRunView[]> {
+  const res = await fetch(`${BASE}/api/jobs/scrape/runs`, { signal })
+  return handleResponse<ScrapeRunView[]>(res)
 }
 
 // --- Email sync ---

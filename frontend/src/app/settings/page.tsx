@@ -15,7 +15,7 @@ import {
   approveAnswer,
   getScrapeProfile,
   putScrapeProfile,
-  runScrape,
+  enqueueScrape,
 } from '@/lib/api'
 import { AutopilotForm } from '@/components/settings/AutopilotForm'
 import { AnswerBank } from '@/components/settings/AnswerBank'
@@ -85,10 +85,11 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleRunScrape(config: ScrapeProfileConfig) {
+  async function handleRunScrape(config: ScrapeProfileConfig): Promise<void> {
     setIsRunning(true)
     try {
-      return await runScrape(config)
+      await enqueueScrape(config)
+      toast.success('Scrape started — track progress in Activity.')
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Scrape failed.')
       throw err
