@@ -63,10 +63,10 @@ export default function AdminPromptsPage() {
 
   return (
     <>
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
         <div>
           <h1 className="text-sm font-semibold">Prompts</h1>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Versioned templates — diff, eval, then promote the active version
           </p>
         </div>
@@ -100,28 +100,28 @@ export default function AdminPromptsPage() {
             {promptNames.map((name) => {
               const versions = [...(grouped[name] ?? [])].sort((a, b) => b.version - a.version)
               return (
-                <section key={name} className="bg-white border border-zinc-200 rounded-xl self-start">
-                  <div className="px-4 py-3 border-b border-zinc-200 flex items-center gap-2">
+                <section key={name} className="bg-card border border-border rounded-xl self-start">
+                  <div className="px-4 py-3 border-b border-border flex items-center gap-2">
                     <h2 className="text-sm font-semibold">{name}</h2>
                     <span className="source-pill">
                       {versions.length} version{versions.length !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  <ul className="divide-y divide-zinc-100">
+                  <ul className="divide-y divide-border">
                     {versions.map((v) => (
                       <li key={v.id}>
                         <Link
                           href={`/admin/prompts/${v.id}`}
-                          className="data-row px-4 py-3 flex items-center justify-between hover:bg-zinc-50"
+                          className="data-row px-4 py-3 flex items-center justify-between hover:bg-muted"
                           style={v.is_active ? { background: '#f0fdf4' } : {}}
                         >
                           <div className="flex items-center gap-2.5">
-                            <span className={`num font-semibold ${v.is_active ? 'text-zinc-800' : 'text-zinc-500'}`}>
+                            <span className={`num font-semibold ${v.is_active ? 'text-foreground' : 'text-muted-foreground'}`}>
                               v{v.version}
                             </span>
                             <div>
                               <span className={getModelBadgeClass(v.model)}>{v.model}</span>
-                              <span className="text-xs text-zinc-400 ml-1">temp {v.temperature}</span>
+                              <span className="text-xs text-muted-foreground ml-1">temp {v.temperature}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">

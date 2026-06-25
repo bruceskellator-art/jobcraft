@@ -65,11 +65,11 @@ export default function CallDetailPage() {
 
   return (
     <>
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center gap-3 px-6 sticky top-0 z-10">
-        <Link href="/admin/calls" className="text-xs text-zinc-400 hover:text-zinc-600">
+      <header className="h-14 bg-card border-b border-border flex items-center gap-3 px-6 sticky top-0 z-10">
+        <Link href="/admin/calls" className="text-xs text-muted-foreground hover:text-muted-foreground">
           ← LLM Calls
         </Link>
-        <div className="h-4 w-px bg-zinc-200" />
+        <div className="h-4 w-px bg-border" />
         <h1 className="text-sm font-semibold">Call Detail</h1>
         {call && (
           <span className={getModelBadgeClass(call.model)}>{call.model}</span>
@@ -88,66 +88,66 @@ export default function CallDetailPage() {
         {!isLoading && !loadError && call && (
           <>
             {/* Meta row */}
-            <div className="bg-white border border-zinc-200 rounded-xl p-4 flex flex-wrap gap-6 text-sm">
+            <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap gap-6 text-sm">
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Model</div>
+                <div className="text-xs text-muted-foreground mb-1">Model</div>
                 <span className={getModelBadgeClass(call.model)}>{call.model}</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Prompt version</div>
+                <div className="text-xs text-muted-foreground mb-1">Prompt version</div>
                 <span className="source-pill">{call.prompt_version_id ?? '—'}</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Tokens</div>
+                <div className="text-xs text-muted-foreground mb-1">Tokens</div>
                 <span className="num text-xs">{call.input_tokens.toLocaleString()} in / {call.output_tokens.toLocaleString()} out</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Latency</div>
+                <div className="text-xs text-muted-foreground mb-1">Latency</div>
                 <span className="num text-xs">{(call.latency_ms / 1000).toFixed(2)}s</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Cost</div>
+                <div className="text-xs text-muted-foreground mb-1">Cost</div>
                 <span className="num text-xs">${call.cost_usd.toFixed(4)}</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Called</div>
-                <span className="text-xs text-zinc-600">{relativeTime(call.called_at)}</span>
+                <div className="text-xs text-muted-foreground mb-1">Called</div>
+                <span className="text-xs text-muted-foreground">{relativeTime(call.called_at)}</span>
               </div>
               {call.error && (
                 <div className="w-full">
-                  <div className="text-xs text-zinc-500 mb-1">Error</div>
+                  <div className="text-xs text-muted-foreground mb-1">Error</div>
                   <span className="text-xs text-red-600 font-mono">{call.error}</span>
                 </div>
               )}
             </div>
 
             {/* Rendered prompt */}
-            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-zinc-100">
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
                 <h2 className="text-sm font-semibold">Rendered Prompt</h2>
               </div>
-              <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-zinc-700">
+              <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-foreground">
                 {call.rendered_prompt}
               </pre>
             </div>
 
             {/* Response */}
-            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-zinc-100">
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
                 <h2 className="text-sm font-semibold">Response</h2>
               </div>
-              <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-zinc-700">
+              <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-foreground">
                 {call.response}
               </pre>
             </div>
 
             {/* Parsed response */}
             {call.parsed_response !== null && (
-              <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-100">
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-border">
                   <h2 className="text-sm font-semibold">Parsed Response</h2>
                 </div>
-                <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-zinc-700">
+                <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-foreground">
                   {JSON.stringify(call.parsed_response, null, 2)}
                 </pre>
               </div>

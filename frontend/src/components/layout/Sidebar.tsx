@@ -102,7 +102,7 @@ export function Sidebar({ activePage }: SidebarProps) {
   return (
     <div className="h-full flex flex-col">
       {/* Logo + brand */}
-      <div className="px-3 py-4 flex items-center gap-2.5 border-b border-zinc-200">
+      <div className="px-3 py-4 flex items-center gap-2.5 border-b border-border">
         <div
           className="w-8 h-8 rounded-lg text-white grid place-items-center shadow-sm"
           style={{ boxShadow: '0 1px 2px rgba(3,105,161,.35)', background: 'var(--primary)' }}
@@ -122,7 +122,7 @@ export function Sidebar({ activePage }: SidebarProps) {
         </div>
         <div>
           <div className="font-semibold text-sm leading-tight tracking-tight">JobCraft</div>
-          <div className="text-[0.7rem] text-zinc-400 leading-tight tracking-wide uppercase">
+          <div className="text-[0.7rem] text-muted-foreground leading-tight tracking-wide uppercase">
             SG · job hunt
           </div>
         </div>
@@ -135,7 +135,7 @@ export function Sidebar({ activePage }: SidebarProps) {
             return (
               <div
                 key={`divider-${idx}`}
-                className="px-3 pt-4 pb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-zinc-400"
+                className="px-3 pt-4 pb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground"
               >
                 {entry.divider}
               </div>
@@ -165,13 +165,13 @@ export function Sidebar({ activePage }: SidebarProps) {
       </nav>
 
       {/* User footer */}
-      <div className="p-3 border-t border-zinc-200 flex items-center gap-2">
-        <div className="w-7 h-7 rounded-full bg-zinc-200 grid place-items-center text-xs font-semibold text-zinc-600">
+      <div className="p-3 border-t border-border flex items-center gap-2">
+        <div className="w-7 h-7 rounded-full bg-muted grid place-items-center text-xs font-semibold text-muted-foreground">
           BO
         </div>
         <div className="text-xs">
-          <div className="font-medium text-zinc-700">Bruce Ong</div>
-          <div className="text-zinc-400">
+          <div className="font-medium text-foreground">Bruce Ong</div>
+          <div className="text-muted-foreground">
             Autopilot:{' '}
             <span className="text-emerald-600 font-medium">selective</span>
           </div>

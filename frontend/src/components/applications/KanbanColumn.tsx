@@ -44,7 +44,7 @@ export function KanbanColumn({
       <div className="card-col-header">
         <div className="flex items-center gap-1.5">
           <span className="col-dot" style={{ background: dotColor }} />
-          <span className="text-xs font-semibold text-zinc-600">{label}</span>
+          <span className="text-xs font-semibold text-muted-foreground">{label}</span>
         </div>
         <span
           className="num text-xs px-1.5 py-0.5 rounded-full"
@@ -55,7 +55,7 @@ export function KanbanColumn({
       </div>
 
       {applications.length === 0 ? (
-        <div className="border border-dashed border-zinc-200 rounded-xl p-8">
+        <div className="border border-dashed border-border rounded-xl p-8">
           <div className="empty">No {label.toLowerCase()}</div>
         </div>
       ) : (

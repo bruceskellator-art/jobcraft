@@ -185,12 +185,12 @@ export function ApplyQueueView() {
       {!isLoading && !loadError && (
         <div className="p-6 grid grid-cols-5 gap-4 items-start">
           {/* Queue list — 3 cols */}
-          <div className="col-span-3 bg-white border border-zinc-200 rounded-xl overflow-hidden">
+          <div className="col-span-3 bg-card border border-border rounded-xl overflow-hidden">
             {queue.length === 0 ? (
               <div className="empty py-16">Queue is empty — nothing to apply.</div>
             ) : (
               <table className="w-full text-sm">
-                <thead className="bg-zinc-50/80 text-zinc-500 text-xs border-b border-zinc-100">
+                <thead className="bg-muted/80 text-muted-foreground text-xs border-b border-border">
                   <tr className="text-left">
                     <th className="px-3 py-2.5 w-8">
                       <Checkbox
@@ -204,7 +204,7 @@ export function ApplyQueueView() {
                     <th className="px-3 py-2.5 font-medium w-24">State</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-border">
                   {queue.map(item => (
                     <QueueRow
                       key={item.application.id}
@@ -230,7 +230,7 @@ export function ApplyQueueView() {
                 isApproving={isApproving}
               />
             ) : (
-              <div className="bg-white border border-zinc-200 rounded-xl">
+              <div className="bg-card border border-border rounded-xl">
                 <div className="empty py-24">Select a job to review</div>
               </div>
             )}

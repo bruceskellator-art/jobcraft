@@ -103,7 +103,7 @@ export default function DashboardPage() {
       id: 'jobs',
       label: 'Jobs indexed',
       value: data.jobCount !== null ? data.jobCount : '—',
-      subLabel: <span className="text-xs text-zinc-400">all sources</span>,
+      subLabel: <span className="text-xs text-muted-foreground">all sources</span>,
       sparklinePoints: FLAT_SPARKLINE,
       sparklineColor: '#10b981',
     },
@@ -111,7 +111,7 @@ export default function DashboardPage() {
       id: 'applications',
       label: 'Applications',
       value: data.appCount !== null ? data.appCount : '—',
-      subLabel: <span className="text-xs text-zinc-400">total submitted</span>,
+      subLabel: <span className="text-xs text-muted-foreground">total submitted</span>,
       sparklinePoints: FLAT_SPARKLINE,
       sparklineColor: '#6366f1',
     },
@@ -119,7 +119,7 @@ export default function DashboardPage() {
       id: 'llm-calls',
       label: 'LLM calls',
       value: totalCalls !== null ? totalCalls.toLocaleString() : '—',
-      subLabel: <span className="text-xs text-zinc-400">all time</span>,
+      subLabel: <span className="text-xs text-muted-foreground">all time</span>,
       sparklinePoints: callsSparkline(byDay),
       sparklineColor: '#6366f1',
     },
@@ -127,7 +127,7 @@ export default function DashboardPage() {
       id: 'llm-cost',
       label: 'LLM cost',
       value: totalCost !== null ? `$${totalCost.toFixed(2)}` : '—',
-      subLabel: <span className="text-xs text-zinc-400">all time</span>,
+      subLabel: <span className="text-xs text-muted-foreground">all time</span>,
       sparklinePoints: costSparkline(byDay),
       sparklineColor: '#f59e0b',
     },
@@ -136,10 +136,10 @@ export default function DashboardPage() {
   return (
     <>
       {/* Header */}
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
         <div>
           <h1 className="text-sm font-semibold">Dashboard</h1>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             {isLoading ? 'Loading…' : 'JobCraft overview'}
           </p>
         </div>

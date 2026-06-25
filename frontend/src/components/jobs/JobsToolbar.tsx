@@ -23,24 +23,24 @@ export function JobsToolbar({
   onSourceChange,
 }: JobsToolbarProps) {
   return (
-    <div className="px-6 py-2.5 bg-white border-b border-zinc-200 flex items-center gap-2 flex-wrap">
+    <div className="px-6 py-2.5 bg-card border-b border-border flex items-center gap-2 flex-wrap">
       <div className="relative">
         <SearchIcon
           size={14}
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
         />
         <input
           type="search"
           placeholder="Search title, company, skill…"
           value={searchValue}
           onChange={e => onSearchChange(e.target.value)}
-          className="text-xs border border-zinc-200 rounded-lg pl-8 pr-3 py-1.5 w-64 focus:outline-none focus:ring-2 focus:ring-indigo-200 bg-white"
+          className="text-xs border border-border rounded-lg pl-8 pr-3 py-1.5 w-64 focus:outline-none focus:ring-2 focus:ring-indigo-200 bg-card"
         />
       </div>
 
-      <div className="h-4 w-px bg-zinc-200 mx-1" aria-hidden />
+      <div className="h-4 w-px bg-border mx-1" aria-hidden />
 
-      <span className="text-xs text-zinc-400">Source</span>
+      <span className="text-xs text-muted-foreground">Source</span>
 
       {SOURCE_OPTIONS.map(opt => {
         const isActive = activeSource === opt.value

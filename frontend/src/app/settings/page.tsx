@@ -141,10 +141,10 @@ export default function SettingsPage() {
   return (
     <>
       <Toaster />
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center px-6 sticky top-0 z-10">
+      <header className="h-14 bg-card border-b border-border flex items-center px-6 sticky top-0 z-10">
         <div>
           <h1 className="text-sm font-semibold">Settings</h1>
-          <p className="text-xs text-zinc-400">Autopilot, answer bank, and profile fields</p>
+          <p className="text-xs text-muted-foreground">Autopilot, answer bank, and profile fields</p>
         </div>
       </header>
 
@@ -169,7 +169,7 @@ export default function SettingsPage() {
         {!isLoading && !loadError && (
           <>
             {/* Scrape Profile */}
-            <section className="bg-white border border-zinc-200 rounded-xl p-4">
+            <section className="bg-card border border-border rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">Scrape profile</h2>
               {scrapeProfile && (
                 <ScrapeProfileForm
@@ -183,21 +183,21 @@ export default function SettingsPage() {
             </section>
 
             {/* Sources & Autopilot */}
-            <section className="bg-white border border-zinc-200 rounded-xl p-4 space-y-4">
+            <section className="bg-card border border-border rounded-xl p-4 space-y-4">
               <h2 className="text-sm font-semibold">Sources &amp; Autopilot</h2>
 
               <table className="w-full text-sm">
-                <thead className="bg-zinc-50/80 text-zinc-500 text-xs border-b border-zinc-100">
+                <thead className="bg-muted/80 text-muted-foreground text-xs border-b border-border">
                   <tr className="text-left">
                     <th className="px-3 py-2 font-medium">Source</th>
                     <th className="px-3 py-2 font-medium">Status</th>
                     <th className="px-3 py-2 font-medium">Trusted</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-border">
                   {SOURCES.map(src => (
                     <tr key={src.key} className="data-row">
-                      <td className="px-3 py-2 font-medium text-zinc-800">{src.name}</td>
+                      <td className="px-3 py-2 font-medium text-foreground">{src.name}</td>
                       <td className="px-3 py-2">
                         <span className="toggle-on">active</span>
                       </td>
@@ -221,7 +221,7 @@ export default function SettingsPage() {
             </section>
 
             {/* Answer Bank */}
-            <section className="bg-white border border-zinc-200 rounded-xl p-4">
+            <section className="bg-card border border-border rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">Answer Bank</h2>
               <AnswerBank
                 answers={answers}
@@ -231,7 +231,7 @@ export default function SettingsPage() {
             </section>
 
             {/* Profile Fields */}
-            <section className="bg-white border border-zinc-200 rounded-xl p-4">
+            <section className="bg-card border border-border rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">Profile Fields</h2>
               <ProfileFields
                 fields={profileFields}

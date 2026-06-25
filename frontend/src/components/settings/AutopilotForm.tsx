@@ -41,7 +41,7 @@ export function AutopilotForm({ initial, onSave, isSaving }: AutopilotFormProps)
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-zinc-600 mb-1">Autopilot mode</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Autopilot mode</label>
           <Select value={mode} onValueChange={(v) => setMode(v as AutopilotMode)}>
             <SelectTrigger className="w-full">
               <SelectValue />
@@ -52,7 +52,7 @@ export function AutopilotForm({ initial, onSave, isSaving }: AutopilotFormProps)
               <SelectItem value="full">Full</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {mode === 'off' && 'All applications require manual approval.'}
             {mode === 'selective' && 'Auto-submit only from trusted sources.'}
             {mode === 'full' && 'Auto-submit all high-confidence applications.'}
@@ -60,7 +60,7 @@ export function AutopilotForm({ initial, onSave, isSaving }: AutopilotFormProps)
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-600 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Min confidence ({Math.round(minConfidence * 100)}%)
           </label>
           <input
@@ -70,12 +70,12 @@ export function AutopilotForm({ initial, onSave, isSaving }: AutopilotFormProps)
             step={0.05}
             value={minConfidence}
             onChange={e => setMinConfidence(parseFloat(e.target.value))}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-zinc-600 mb-1">Daily cap</label>
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Daily cap</label>
           <input
             type="number"
             min={1}
@@ -83,9 +83,9 @@ export function AutopilotForm({ initial, onSave, isSaving }: AutopilotFormProps)
             step={1}
             value={dailyCap}
             onChange={e => setDailyCap(parseInt(e.target.value, 10))}
-            className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-          <p className="text-xs text-zinc-400 mt-1">Max applications submitted per day.</p>
+          <p className="text-xs text-muted-foreground mt-1">Max applications submitted per day.</p>
         </div>
       </div>
 

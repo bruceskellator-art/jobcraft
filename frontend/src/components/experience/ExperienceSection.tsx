@@ -85,10 +85,10 @@ export function ExperienceSection({ kind, items, onEdit, onDelete, onReorder }: 
   }
 
   return (
-    <section className="bg-white border border-zinc-200 rounded-xl">
-      <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+    <section className="bg-card border border-border rounded-xl">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-sm font-semibold">{label}</h2>
-        <span className="num text-xs text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded-full">
+        <span className="num text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
           {items.length} item{items.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -103,7 +103,7 @@ export function ExperienceSection({ kind, items, onEdit, onDelete, onReorder }: 
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
-            <div className="divide-y divide-zinc-100">
+            <div className="divide-y divide-border">
               {items.map(item => (
                 <SortableCard
                   key={item.id}

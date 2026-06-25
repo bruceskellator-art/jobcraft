@@ -32,14 +32,14 @@ const SOURCES: Source[] = [
     label: 'Glints / NodeFlair',
     dotColor: '#a1a1aa',
     count: 63,
-    countColor: 'text-zinc-400',
+    countColor: 'text-muted-foreground',
   },
 ]
 
 export function SourcesPanel() {
   return (
-    <section className="bg-white border border-zinc-200 rounded-xl">
-      <div className="px-4 py-3 border-b border-zinc-200">
+    <section className="bg-card border border-border rounded-xl">
+      <div className="px-4 py-3 border-b border-border">
         <h2 className="text-sm font-semibold">Sources</h2>
       </div>
       <ul className="p-2">
@@ -53,7 +53,7 @@ export function SourcesPanel() {
                 className="col-dot"
                 style={{ background: source.dotColor }}
               />
-              <span className="text-xs font-medium text-zinc-700">
+              <span className="text-xs font-medium text-foreground">
                 {source.label}
                 {source.sublabel && (
                   <>

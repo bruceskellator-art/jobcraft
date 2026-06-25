@@ -40,14 +40,14 @@ export function ExperienceCard({ item, onEdit, onDelete, draggable: isDraggable 
       {isDraggable && (
         <button
           type="button"
-          className="flex-none mt-1 cursor-grab active:cursor-grabbing text-zinc-300 hover:text-zinc-400 transition-colors focus:outline-none"
+          className="flex-none mt-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-muted-foreground transition-colors focus:outline-none"
           aria-label="Drag to reorder"
           {...dragHandleProps}
         >
           <GripVerticalIcon size={14} />
         </button>
       )}
-      <span className="num text-xs text-zinc-400 w-16 flex-none pt-0.5 mt-0.5">{shortId}</span>
+      <span className="num text-xs text-muted-foreground w-16 flex-none pt-0.5 mt-0.5">{shortId}</span>
       {item.organization && (
         <div
           className="logo-avatar flex-none mt-0.5"
@@ -57,8 +57,8 @@ export function ExperienceCard({ item, onEdit, onDelete, draggable: isDraggable 
         </div>
       )}
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-zinc-800">{item.content}</div>
-        {subtitle && <div className="text-xs text-zinc-500 mt-0.5">{subtitle}</div>}
+        <div className="text-sm font-semibold text-foreground">{item.content}</div>
+        {subtitle && <div className="text-xs text-muted-foreground mt-0.5">{subtitle}</div>}
         {item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
             {item.tags.map(tag => (
@@ -70,14 +70,14 @@ export function ExperienceCard({ item, onEdit, onDelete, draggable: isDraggable 
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex-none">
         <button
           onClick={onEdit}
-          className="p-1 rounded hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
+          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
           aria-label="Edit item"
         >
           <PencilIcon size={13} />
         </button>
         <button
           onClick={onDelete}
-          className="p-1 rounded hover:bg-red-50 text-zinc-400 hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
+          className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40"
           aria-label="Delete item"
         >
           <Trash2Icon size={13} />

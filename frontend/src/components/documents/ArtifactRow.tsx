@@ -49,8 +49,8 @@ export function ArtifactRow({
       : null
 
   function renderDelta() {
-    if (!scores) return <span className="text-zinc-300 num">—</span>
-    if (delta === null) return <span className="text-zinc-400 num text-xs">new</span>
+    if (!scores) return <span className="text-muted-foreground num">—</span>
+    if (delta === null) return <span className="text-muted-foreground num text-xs">new</span>
     const cls = delta >= 0 ? 'text-emerald-600' : 'text-rose-600'
     return <span className={`num font-semibold ${cls}`}>{formatDelta(delta)}</span>
   }
@@ -74,8 +74,8 @@ export function ArtifactRow({
         <div className="flex items-center gap-2">
           <CompanyLogo company={jobCompany || jobTitle} size="sm" />
           <div>
-            <div className="font-semibold text-zinc-800 text-sm">{jobTitle}</div>
-            <div className="text-xs text-zinc-400">
+            <div className="font-semibold text-foreground text-sm">{jobTitle}</div>
+            <div className="text-xs text-muted-foreground">
               {jobCompany}
               {artifact.prompt_version_id && (
                 <>
@@ -93,7 +93,7 @@ export function ArtifactRow({
             {isResume ? 'Résumé' : 'Cover letter'}
           </span>
           {artifact.template_id && (
-            <span className="text-[10px] text-zinc-400 border border-zinc-200 rounded px-1 py-0.5 w-fit">
+            <span className="text-[10px] text-muted-foreground border border-border rounded px-1 py-0.5 w-fit">
               {artifact.template_id}
             </span>
           )}
@@ -103,7 +103,7 @@ export function ArtifactRow({
         {scores ? (
           <span className={`chip ${scoreColor(scores.fit)}`}>{scores.fit.toFixed(2)}</span>
         ) : (
-          <span className="text-zinc-300 num">—</span>
+          <span className="text-muted-foreground num">—</span>
         )}
       </td>
       <td className="px-2 py-3 text-center">
@@ -112,7 +112,7 @@ export function ArtifactRow({
             {scores.groundedness.toFixed(2)}
           </span>
         ) : (
-          <span className="text-zinc-300 num">—</span>
+          <span className="text-muted-foreground num">—</span>
         )}
       </td>
       <td className="px-2 py-3 text-center">
@@ -121,7 +121,7 @@ export function ArtifactRow({
             {scores.ats_keywords.toFixed(2)}
           </span>
         ) : (
-          <span className="text-zinc-300 num">—</span>
+          <span className="text-muted-foreground num">—</span>
         )}
       </td>
       <td className="px-2 py-3 text-center">
@@ -130,7 +130,7 @@ export function ArtifactRow({
             {scores.quantified_impact.toFixed(2)}
           </span>
         ) : (
-          <span className="text-zinc-300 num">—</span>
+          <span className="text-muted-foreground num">—</span>
         )}
       </td>
       <td className="px-2 py-3 text-right">{renderDelta()}</td>

@@ -129,15 +129,15 @@ function AccountRow({
         <div className="flex items-center gap-2">
           <span className="col-dot" style={{ background: account.provider === 'gmail' ? '#ea4335' : '#0078d4' }} />
           <div>
-            <div className="text-sm font-medium text-zinc-800">{account.email_address}</div>
-            <div className="text-xs text-zinc-400">{providerLabel}</div>
+            <div className="text-sm font-medium text-foreground">{account.email_address}</div>
+            <div className="text-xs text-muted-foreground">{providerLabel}</div>
           </div>
         </div>
       </td>
       <td className="px-4 py-3">
         <AccountStatusBadge status={account.status} />
       </td>
-      <td className="px-4 py-3 text-xs text-zinc-400 num">{lastSynced}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground num">{lastSynced}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <button
@@ -193,15 +193,15 @@ function ConnectForm({ onConnect, isConnecting }: ConnectFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wide bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
           Dev mode
         </span>
-        <span className="text-xs text-zinc-400">Connect an account using an OAuth access token directly.</span>
+        <span className="text-xs text-muted-foreground">Connect an account using an OAuth access token directly.</span>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
+          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
             Provider
           </label>
           <Select value={provider} onValueChange={(v) => setProvider(v as EmailProvider)}>
@@ -216,12 +216,12 @@ function ConnectForm({ onConnect, isConnecting }: ConnectFormProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
+          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
             Email address
           </label>
           <input
             type="email"
-            className="w-full border border-zinc-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full border border-border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -229,12 +229,12 @@ function ConnectForm({ onConnect, isConnecting }: ConnectFormProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
+          <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
             Access token
           </label>
           <input
             type="password"
-            className="w-full border border-zinc-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            className="w-full border border-border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             placeholder="ya29.…"
             value={accessToken}
             onChange={(e) => setAccessToken(e.target.value)}
@@ -344,10 +344,10 @@ export function EmailSync() {
   }
 
   return (
-    <section className="bg-white border border-zinc-200 rounded-xl">
-      <div className="px-4 py-3 border-b border-zinc-200">
+    <section className="bg-card border border-border rounded-xl">
+      <div className="px-4 py-3 border-b border-border">
         <h2 className="text-sm font-semibold">Email sync</h2>
-        <p className="text-xs text-zinc-400 mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           Connect Gmail or Outlook to automatically detect status changes from recruiter emails.
         </p>
       </div>
@@ -357,7 +357,7 @@ export function EmailSync() {
 
         {/* Connected accounts */}
         <div>
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
             Connected accounts
           </h3>
 
@@ -385,9 +385,9 @@ export function EmailSync() {
           )}
 
           {!isLoading && !loadError && accounts.length > 0 && (
-            <div className="border border-zinc-100 rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <table className="w-full text-sm">
-                <thead className="bg-zinc-50/80 text-zinc-500 text-xs border-b border-zinc-100">
+                <thead className="bg-muted/80 text-muted-foreground text-xs border-b border-border">
                   <tr className="text-left">
                     <th className="px-4 py-2 font-medium">Account</th>
                     <th className="px-4 py-2 font-medium">Status</th>
@@ -395,7 +395,7 @@ export function EmailSync() {
                     <th className="px-4 py-2 font-medium">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-100">
+                <tbody className="divide-y divide-border">
                   {accounts.map((account) => (
                     <AccountRow
                       key={account.id}
@@ -413,8 +413,8 @@ export function EmailSync() {
         </div>
 
         {/* Connect form */}
-        <div className="border-t border-zinc-100 pt-4">
-          <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-3">
+        <div className="border-t border-border pt-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
             Add account
           </h3>
           <ConnectForm onConnect={handleConnect} isConnecting={isConnecting} />

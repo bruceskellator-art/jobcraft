@@ -164,10 +164,10 @@ export default function ApplicationsPage() {
   return (
     <>
       <Toaster />
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
         <div>
           <h1 className="text-sm font-semibold">Applications</h1>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             {isLoading
               ? 'Loading…'
               : loadError

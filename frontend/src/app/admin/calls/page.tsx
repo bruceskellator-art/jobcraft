@@ -109,22 +109,22 @@ export default function AdminCallsPage() {
 
   return (
     <>
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
         <div>
           <h1 className="text-sm font-semibold">LLM Calls</h1>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Every model call — prompt, response, tokens, latency, cost
           </p>
         </div>
         <div className="flex items-center gap-2">
           <input
-            className="text-xs border border-zinc-200 rounded-lg px-2 py-1.5 text-zinc-600 w-36"
+            className="text-xs border border-border rounded-lg px-2 py-1.5 text-muted-foreground w-36"
             placeholder="Filter by model…"
             value={modelFilter}
             onChange={(e) => setModelFilter(e.target.value)}
           />
           <Select value={String(limit)} onValueChange={(v) => setLimit(Number(v))}>
-            <SelectTrigger size="sm" className="text-xs text-zinc-600">
+            <SelectTrigger size="sm" className="text-xs text-muted-foreground">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -144,35 +144,35 @@ export default function AdminCallsPage() {
           <StatTile
             label="Total calls"
             value={totals ? totals.total_calls.toLocaleString() : '—'}
-            subLabel={<span className="text-xs text-zinc-400">all time</span>}
+            subLabel={<span className="text-xs text-muted-foreground">all time</span>}
             sparklinePoints={callsSparklinePoints(byDay)}
             sparklineColor="#6366f1"
           />
           <StatTile
             label="Total cost"
             value={totals ? `$${totals.total_cost.toFixed(2)}` : '—'}
-            subLabel={<span className="text-xs text-zinc-400">all time</span>}
+            subLabel={<span className="text-xs text-muted-foreground">all time</span>}
             sparklinePoints={costSparklinePoints(byDay)}
             sparklineColor="#f59e0b"
           />
           <StatTile
             label="Avg latency"
             value={totals ? `${(totals.avg_latency_ms / 1000).toFixed(1)}s` : '—'}
-            subLabel={<span className="text-xs text-zinc-400">all time</span>}
+            subLabel={<span className="text-xs text-muted-foreground">all time</span>}
             sparklinePoints={FLAT_SPARKLINE}
             sparklineColor="#10b981"
           />
           <StatTile
             label="Error rate"
             value={totals ? `${(totals.error_rate * 100).toFixed(1)}%` : '—'}
-            subLabel={<span className="text-xs text-zinc-400">all time</span>}
+            subLabel={<span className="text-xs text-muted-foreground">all time</span>}
             sparklinePoints={FLAT_SPARKLINE}
             sparklineColor="#f43f5e"
           />
         </section>
 
         {/* Calls table */}
-        <section className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
+        <section className="bg-card border border-border rounded-xl overflow-hidden">
           {isLoading && <div className="empty py-12">Loading calls…</div>}
 
           {!isLoading && loadError && (
@@ -187,7 +187,7 @@ export default function AdminCallsPage() {
 
           {!isLoading && !loadError && calls.length > 0 && (
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50/80 text-zinc-500 text-xs border-b border-zinc-100">
+              <thead className="bg-muted/80 text-muted-foreground text-xs border-b border-border">
                 <tr className="text-left">
                   <th className="px-4 py-2.5 font-medium">Time</th>
                   <th className="px-2 py-2.5 font-medium">Prompt version</th>
@@ -198,7 +198,7 @@ export default function AdminCallsPage() {
                   <th className="px-2 py-2.5 font-medium">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-100">
+              <tbody className="divide-y divide-border">
                 {calls.map((call) => (
                   <CallRow key={call.id} call={call} />
                 ))}
@@ -206,7 +206,7 @@ export default function AdminCallsPage() {
             </table>
           )}
 
-          <div className="px-4 py-3 border-t border-zinc-100 text-xs text-zinc-400">
+          <div className="px-4 py-3 border-t border-border text-xs text-muted-foreground">
             Click a row to inspect the full rendered prompt + raw response.
           </div>
         </section>

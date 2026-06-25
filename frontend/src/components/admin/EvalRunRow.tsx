@@ -37,7 +37,7 @@ export function EvalRunRow({ run, prevPassRate }: EvalRunRowProps) {
       className="data-row"
       style={isFailing ? { background: '#fff1f2' } : undefined}
     >
-      <td className="px-4 py-2.5 font-medium text-zinc-800">
+      <td className="px-4 py-2.5 font-medium text-foreground">
         <Link href={`/admin/evals/${run.id}`} className="hover:underline">
           {run.suite_name}
         </Link>
@@ -46,14 +46,14 @@ export function EvalRunRow({ run, prevPassRate }: EvalRunRowProps) {
         {run.prompt_version_id ? (
           <span className="source-pill">{run.prompt_version_id}</span>
         ) : (
-          <span className="text-zinc-400 text-xs">—</span>
+          <span className="text-muted-foreground text-xs">—</span>
         )}
       </td>
       <td className="px-2 py-2.5">
         {modelBadge ? (
           <span className={`model-badge ${modelBadge.cls}`}>{modelBadge.label}</span>
         ) : (
-          <span className="text-zinc-400 text-xs">—</span>
+          <span className="text-muted-foreground text-xs">—</span>
         )}
       </td>
       <td
@@ -64,7 +64,7 @@ export function EvalRunRow({ run, prevPassRate }: EvalRunRowProps) {
       <td
         className={`px-2 py-2.5 num text-right font-semibold${
           delta === null
-            ? ' text-zinc-400'
+            ? ' text-muted-foreground'
             : delta >= 0
               ? ' text-emerald-600'
               : ' text-rose-600'
@@ -80,7 +80,7 @@ export function EvalRunRow({ run, prevPassRate }: EvalRunRowProps) {
           {isFailing ? 'fail · below baseline' : 'pass'}
         </span>
       </td>
-      <td className="px-2 py-2.5 text-xs text-zinc-400">
+      <td className="px-2 py-2.5 text-xs text-muted-foreground">
         {formatDateTime(run.started_at)}
       </td>
     </tr>

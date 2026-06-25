@@ -42,7 +42,7 @@ export function AnswerBank({ answers, onApprove, onCreate }: AnswerBankProps) {
   return (
     <div className="space-y-2">
       {answers.length === 0 && !showForm && (
-        <p className="text-sm text-zinc-400 py-4 text-center">No saved answers yet.</p>
+        <p className="text-sm text-muted-foreground py-4 text-center">No saved answers yet.</p>
       )}
 
       {answers.map(item => (
@@ -50,14 +50,14 @@ export function AnswerBank({ answers, onApprove, onCreate }: AnswerBankProps) {
           key={item.id}
           className={`rounded-lg border px-3 py-2.5 ${
             item.approved
-              ? 'border-zinc-200 bg-white'
+              ? 'border-border bg-card'
               : 'border-amber-200 bg-amber-50'
           }`}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-zinc-500">{item.question}</p>
-              <p className="text-sm text-zinc-800 mt-0.5">{item.answer}</p>
+              <p className="text-xs font-medium text-muted-foreground">{item.question}</p>
+              <p className="text-sm text-foreground mt-0.5">{item.answer}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {item.approved ? (
@@ -82,22 +82,22 @@ export function AnswerBank({ answers, onApprove, onCreate }: AnswerBankProps) {
       ))}
 
       {showForm ? (
-        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 space-y-2">
+        <div className="rounded-lg border border-border bg-muted p-3 space-y-2">
           <div>
-            <label className="block text-xs font-medium text-zinc-600 mb-1">Question</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Question</label>
             <textarea
               rows={2}
-              className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
               placeholder="e.g. Why do you want to work here?"
               value={question}
               onChange={e => setQuestion(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-zinc-600 mb-1">Answer</label>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">Answer</label>
             <textarea
               rows={3}
-              className="w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
               placeholder="Your answer…"
               value={answer}
               onChange={e => setAnswer(e.target.value)}

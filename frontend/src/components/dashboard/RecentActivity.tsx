@@ -103,28 +103,28 @@ const ACTIVITY_ROWS: ActivityRow[] = [
 
 export function RecentActivity() {
   return (
-    <section className="bg-white border border-zinc-200 rounded-xl">
-      <div className="px-4 py-3 border-b border-zinc-200">
+    <section className="bg-card border border-border rounded-xl">
+      <div className="px-4 py-3 border-b border-border">
         <h2 className="text-sm font-semibold">Recent activity</h2>
       </div>
       <table className="w-full text-sm">
-        <tbody className="divide-y divide-zinc-100">
+        <tbody className="divide-y divide-border">
           {ACTIVITY_ROWS.map((row) => (
             <tr key={row.id} className="data-row">
-              <td className="px-4 py-2.5 w-16 text-xs text-zinc-400 num">
+              <td className="px-4 py-2.5 w-16 text-xs text-muted-foreground num">
                 {row.time}
               </td>
               <td className="px-4 py-2.5 w-10">
                 <CompanyLogo company={row.company} size="sm" />
               </td>
               <td className="px-2 py-2.5">
-                <span className="text-zinc-700">
+                <span className="text-foreground">
                   {row.description} ·{' '}
-                  <span className="font-semibold text-zinc-900">
+                  <span className="font-semibold text-foreground">
                     {row.jobTitle}
                   </span>
                   {row.note && (
-                    <span className={`text-xs ${row.noteColor ?? 'text-zinc-500'}`}>
+                    <span className={`text-xs ${row.noteColor ?? 'text-muted-foreground'}`}>
                       {' '}{row.note}
                     </span>
                   )}

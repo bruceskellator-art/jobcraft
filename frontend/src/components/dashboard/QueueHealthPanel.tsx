@@ -40,8 +40,8 @@ const PROGRESS_COLORS: Record<string, string> = {
 
 export function QueueHealthPanel() {
   return (
-    <section className="bg-white border border-zinc-200 rounded-xl">
-      <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+    <section className="bg-card border border-border rounded-xl">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-sm font-semibold">Apply queue health</h2>
         <Link
           href="/apply-queue"
@@ -58,7 +58,7 @@ export function QueueHealthPanel() {
               <span className={`dot ${item.dotColor}`} />
               {item.label}
             </span>
-            <div className="flex-1 h-1.5 rounded-full bg-zinc-100 overflow-hidden">
+            <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
               <div
                 className="h-full rounded-full"
                 style={{
@@ -67,7 +67,7 @@ export function QueueHealthPanel() {
                 }}
               />
             </div>
-            <span className="num text-xs text-zinc-500 w-4 text-right">
+            <span className="num text-xs text-muted-foreground w-4 text-right">
               {item.count}
             </span>
           </div>

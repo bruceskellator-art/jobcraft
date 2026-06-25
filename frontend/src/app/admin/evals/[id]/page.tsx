@@ -51,16 +51,16 @@ function AssertionRow({ assertion }: AssertionRowProps) {
       }`}
     >
       <div className="flex items-center gap-2">
-        <span className="font-semibold text-zinc-700 source-pill">{assertion.kind}</span>
+        <span className="font-semibold text-foreground source-pill">{assertion.kind}</span>
         <span
           className={`font-semibold ${assertion.passed ? 'text-emerald-600' : 'text-rose-600'}`}
         >
           {assertion.passed ? 'pass' : 'fail'}
         </span>
-        <span className="num text-zinc-500">{assertion.score.toFixed(2)}</span>
+        <span className="num text-muted-foreground">{assertion.score.toFixed(2)}</span>
       </div>
       {assertion.detail && (
-        <p className={`mt-1 ${assertion.passed ? 'text-zinc-500' : 'text-rose-700'}`}>
+        <p className={`mt-1 ${assertion.passed ? 'text-muted-foreground' : 'text-rose-700'}`}>
           {assertion.detail}
         </p>
       )}
@@ -75,14 +75,14 @@ interface CaseCardProps {
 function CaseCard({ caseResult }: CaseCardProps) {
   return (
     <div
-      className={`bg-white border rounded-xl p-4 space-y-2 ${
-        caseResult.passed ? 'border-zinc-200' : 'border-rose-200'
+      className={`bg-card border rounded-xl p-4 space-y-2 ${
+        caseResult.passed ? 'border-border' : 'border-rose-200'
       }`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-zinc-700 font-mono">{caseResult.case_id}</span>
+        <span className="text-sm font-medium text-foreground font-mono">{caseResult.case_id}</span>
         <div className="flex items-center gap-2">
-          <span className="num text-sm text-zinc-500">{caseResult.score.toFixed(2)}</span>
+          <span className="num text-sm text-muted-foreground">{caseResult.score.toFixed(2)}</span>
           <span className={`badge ${caseResult.passed ? 'badge-submitted' : 'badge-failed'}`}>
             <span
               className={`dot ${caseResult.passed ? 'bg-emerald-500' : 'bg-rose-500'}`}
@@ -135,23 +135,23 @@ export default function EvalRunDetailPage({ params }: PageProps) {
 
   return (
     <>
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center gap-4 px-6 sticky top-0 z-10">
+      <header className="h-14 bg-card border-b border-border flex items-center gap-4 px-6 sticky top-0 z-10">
         <Link
           href="/admin/evals"
-          className="text-zinc-400 hover:text-zinc-700 transition-colors text-sm flex items-center gap-1"
+          className="text-muted-foreground hover:text-foreground transition-colors text-sm flex items-center gap-1"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2Z" />
           </svg>
           Evals
         </Link>
-        <span className="text-zinc-300">/</span>
+        <span className="text-muted-foreground">/</span>
         <div>
           <h1 className="text-sm font-semibold">
             {run ? run.suite_name : 'Run detail'}
           </h1>
           {run && (
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               {formatDateTime(run.started_at)}
               {run.completed_at ? ` → ${formatDateTime(run.completed_at)}` : ' · running…'}
             </p>
@@ -170,25 +170,25 @@ export default function EvalRunDetailPage({ params }: PageProps) {
 
         {!isLoading && !loadError && run && (
           <>
-            <div className="bg-white border border-zinc-200 rounded-xl p-4 flex items-center gap-6 flex-wrap">
+            <div className="bg-card border border-border rounded-xl p-4 flex items-center gap-6 flex-wrap">
               <div>
-                <div className="text-xs text-zinc-500 font-medium">Suite</div>
-                <div className="text-sm font-semibold text-zinc-800 mt-0.5">
+                <div className="text-xs text-muted-foreground font-medium">Suite</div>
+                <div className="text-sm font-semibold text-foreground mt-0.5">
                   {run.suite_name}
                 </div>
               </div>
               {run.prompt_version_id && (
                 <div>
-                  <div className="text-xs text-zinc-500 font-medium">Prompt version</div>
+                  <div className="text-xs text-muted-foreground font-medium">Prompt version</div>
                   <span className="source-pill mt-0.5 inline-block">{run.prompt_version_id}</span>
                 </div>
               )}
               <div>
-                <div className="text-xs text-zinc-500 font-medium">Pass rate</div>
+                <div className="text-xs text-muted-foreground font-medium">Pass rate</div>
                 <div className="num text-xl font-semibold mt-0.5">{passRate.toFixed(2)}</div>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 font-medium">Cases</div>
+                <div className="text-xs text-muted-foreground font-medium">Cases</div>
                 <div className="num text-xl font-semibold mt-0.5">
                   {passedCases}/{totalCases}
                 </div>
@@ -197,7 +197,7 @@ export default function EvalRunDetailPage({ params }: PageProps) {
                 .filter(([key]) => key !== 'pass_rate')
                 .map(([key, val]) => (
                   <div key={key}>
-                    <div className="text-xs text-zinc-500 font-medium">{key}</div>
+                    <div className="text-xs text-muted-foreground font-medium">{key}</div>
                     <div className="num text-xl font-semibold mt-0.5">{val.toFixed(2)}</div>
                   </div>
                 ))}
@@ -207,7 +207,7 @@ export default function EvalRunDetailPage({ params }: PageProps) {
               <div className="empty py-12">No case results in this run.</div>
             ) : (
               <div className="space-y-3">
-                <h2 className="text-sm font-semibold text-zinc-700">
+                <h2 className="text-sm font-semibold text-foreground">
                   Case results ({totalCases})
                 </h2>
                 {run.results.map((caseResult) => (

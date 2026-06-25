@@ -34,18 +34,18 @@ export function CallRow({ call }: CallRowProps) {
       className="data-row cursor-pointer"
       onClick={handleClick}
     >
-      <td className="px-4 py-2.5 num text-xs text-zinc-400">{timeAgo}</td>
+      <td className="px-4 py-2.5 num text-xs text-muted-foreground">{timeAgo}</td>
       <td className="px-2 py-2.5">
         {call.prompt_version_id ? (
           <span className="source-pill">{call.prompt_version_id}</span>
         ) : (
-          <span className="text-xs text-zinc-400">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         )}
       </td>
       <td className="px-2 py-2.5">
         <span className={getModelBadgeClass(call.model)}>{call.model}</span>
       </td>
-      <td className="px-2 py-2.5 num text-right text-xs text-zinc-500">
+      <td className="px-2 py-2.5 num text-right text-xs text-muted-foreground">
         {formatTokens(call.input_tokens)} / {formatTokens(call.output_tokens)}
       </td>
       <td className="px-2 py-2.5 num text-right text-xs">

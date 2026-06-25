@@ -44,12 +44,12 @@ export function SuiteCard({ suiteName, latestRun, recentRuns }: SuiteCardProps) 
 
   return (
     <div
-      className="bg-white border border-zinc-200 rounded-xl p-4"
+      className="bg-card border border-border rounded-xl p-4"
       style={isFailing ? { borderColor: '#fecdd3' } : undefined}
     >
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             {suiteName}
           </div>
           <div
@@ -66,20 +66,20 @@ export function SuiteCard({ suiteName, latestRun, recentRuns }: SuiteCardProps) 
                   {delta >= 0 ? '↑' : '↓'} {delta >= 0 ? '+' : ''}
                   {delta.toFixed(2)}
                 </span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-muted-foreground">
                   vs prev {prevRate?.toFixed(2)}
                   {isFailing ? ' ⚠' : ''}
                 </span>
               </>
             ) : (
-              <span className="text-xs text-zinc-400">first run</span>
+              <span className="text-xs text-muted-foreground">first run</span>
             )}
           </div>
         </div>
         <span className={`chip ${chipClass} self-start`}>{chipLabel}</span>
       </div>
 
-      <div className="text-xs text-zinc-400 mt-3 mb-2">
+      <div className="text-xs text-muted-foreground mt-3 mb-2">
         {caseCount} case{caseCount !== 1 ? 's' : ''} · last run{' '}
         {latestRun.completed_at ? formatTime(latestRun.completed_at) : 'running…'}
       </div>

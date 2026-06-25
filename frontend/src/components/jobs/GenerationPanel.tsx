@@ -61,7 +61,7 @@ function ResumeIframe({ artifactId }: { artifactId: string }) {
   if (isLoading) {
     return (
       <div
-        className="w-full bg-zinc-50 border border-zinc-200 rounded flex items-center justify-center text-xs text-zinc-400"
+        className="w-full bg-muted border border-border rounded flex items-center justify-center text-xs text-muted-foreground"
         style={{ height: '320px' }}
       >
         Loading preview…
@@ -72,7 +72,7 @@ function ResumeIframe({ artifactId }: { artifactId: string }) {
   if (!html) {
     return (
       <div
-        className="w-full bg-zinc-50 border border-zinc-200 rounded flex items-center justify-center text-xs text-zinc-400"
+        className="w-full bg-muted border border-border rounded flex items-center justify-center text-xs text-muted-foreground"
         style={{ height: '320px' }}
       >
         Preview unavailable
@@ -85,7 +85,7 @@ function ResumeIframe({ artifactId }: { artifactId: string }) {
 
   return (
     <div
-      className="overflow-hidden rounded border border-zinc-200"
+      className="overflow-hidden rounded border border-border"
       style={{ width: `${containerW}px`, height: `${Math.round(A4_H * scale)}px` }}
     >
       <iframe
@@ -108,13 +108,13 @@ function ResumeIframe({ artifactId }: { artifactId: string }) {
 function SimpleMarkdown({ content }: { content: string }) {
   const lines = content.split('\n')
   return (
-    <div className="text-sm text-zinc-700 space-y-1 leading-relaxed">
+    <div className="text-sm text-foreground space-y-1 leading-relaxed">
       {lines.map((line, i) => {
         if (line.startsWith('## ')) {
-          return <div key={i} className="font-semibold text-zinc-800 mt-2">{line.slice(3)}</div>
+          return <div key={i} className="font-semibold text-foreground mt-2">{line.slice(3)}</div>
         }
         if (line.startsWith('# ')) {
-          return <div key={i} className="font-bold text-zinc-900 text-base mt-3">{line.slice(2)}</div>
+          return <div key={i} className="font-bold text-foreground text-base mt-3">{line.slice(2)}</div>
         }
         if (line.startsWith('- ') || line.startsWith('* ')) {
           return <div key={i} className="pl-3">• {line.slice(2)}</div>
@@ -139,7 +139,7 @@ function ArtifactScoreRow({ artifact }: { artifact: Artifact }) {
     <div className="space-y-3">
       {scores && (
         <div className="flex items-center justify-between text-xs mb-1">
-          <span className="text-zinc-400">Groundedness — claim → corpus</span>
+          <span className="text-muted-foreground">Groundedness — claim → corpus</span>
           <span
             className={`chip ${scoreColor(scores.groundedness)}`}
             style={{ minWidth: 'auto', padding: '0.1rem 0.4rem', fontSize: '0.65rem' }}
@@ -181,7 +181,7 @@ function TemplatePicker({
 }) {
   return (
     <div>
-      <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide block mb-1.5">
+      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">
         Template
       </label>
       <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
@@ -197,7 +197,7 @@ function TemplatePicker({
               'focus:outline-none focus:ring-2 focus:ring-indigo-300',
               selectedId === t.id
                 ? 'border-indigo-500 bg-indigo-50'
-                : 'border-zinc-200 bg-white hover:border-zinc-300',
+                : 'border-border bg-card hover:border-border',
               disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             ].join(' ')}
             style={{ width: '72px' }}
@@ -206,11 +206,11 @@ function TemplatePicker({
             <img
               src={t.thumbnail_url}
               alt={t.name}
-              className="w-full rounded object-cover border border-zinc-100"
+              className="w-full rounded object-cover border border-border"
               style={{ height: '90px' }}
               loading="lazy"
             />
-            <span className="text-[10px] text-zinc-600 text-center leading-tight line-clamp-2">
+            <span className="text-[10px] text-muted-foreground text-center leading-tight line-clamp-2">
               {t.name}
             </span>
           </button>
@@ -303,15 +303,15 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
   return (
     <div className="space-y-5">
       {/* Generation controls */}
-      <section className="bg-white border border-zinc-200 rounded-xl">
-        <div className="px-4 py-3 border-b border-zinc-200">
+      <section className="bg-card border border-border rounded-xl">
+        <div className="px-4 py-3 border-b border-border">
           <h2 className="text-sm font-semibold">Generate documents</h2>
-          <p className="text-xs text-zinc-400 mt-0.5">Tailored to this job&apos;s requirements</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Tailored to this job&apos;s requirements</p>
         </div>
         <div className="p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide block mb-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1">
                 Tone
               </label>
               <Select
@@ -330,7 +330,7 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wide block mb-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1">
                 Length
               </label>
               <Select
@@ -378,12 +378,12 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
 
       {/* Latest resume preview */}
       {latestResume && (
-        <section className="bg-white border border-zinc-200 rounded-xl">
-          <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+        <section className="bg-card border border-border rounded-xl">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">Tailored résumé</h2>
               {latestResume.template_id && (
-                <p className="text-xs text-zinc-400 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Template: {latestResume.template_id}
                   {latestResume.prompt_version_id && (
                     <> · <span className="num">{latestResume.prompt_version_id}</span></>
@@ -422,12 +422,12 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
 
       {/* Latest cover letter preview */}
       {latestCover && (
-        <section className="bg-white border border-zinc-200 rounded-xl">
-          <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+        <section className="bg-card border border-border rounded-xl">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">Cover letter</h2>
               {latestCover.prompt_version_id && (
-                <p className="text-xs text-zinc-400 mt-0.5 num">{latestCover.prompt_version_id}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 num">{latestCover.prompt_version_id}</p>
               )}
             </div>
             {latestCover.scores && (
@@ -437,7 +437,7 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
             )}
           </div>
           <div className="p-4 space-y-4">
-            <div className="text-xs text-zinc-500 leading-relaxed">
+            <div className="text-xs text-muted-foreground leading-relaxed">
               <SimpleMarkdown content={latestCover.content} />
             </div>
             <ArtifactScoreRow artifact={latestCover} />
@@ -450,25 +450,25 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
 
       {/* Prior artifacts */}
       {!isLoadingPrior && priorArtifacts.length > 0 && (
-        <section className="bg-white border border-zinc-200 rounded-xl">
-          <div className="px-4 py-3 border-b border-zinc-200">
+        <section className="bg-card border border-border rounded-xl">
+          <div className="px-4 py-3 border-b border-border">
             <h2 className="text-sm font-semibold">Prior generations</h2>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-muted-foreground">
               {priorArtifacts.length} document{priorArtifacts.length !== 1 ? 's' : ''} for this job
             </p>
           </div>
-          <ul className="divide-y divide-zinc-100">
+          <ul className="divide-y divide-border">
             {priorArtifacts.map(a => (
               <li key={a.id} className="px-4 py-3 flex items-center gap-3 data-row">
                 <span className={`skill-tag ${a.kind === 'resume' ? 'skill-gen' : 'skill-fe'}`}>
                   {a.kind === 'resume' ? 'Résumé' : 'Cover letter'}
                 </span>
                 {a.template_id && (
-                  <span className="text-[10px] text-zinc-400 border border-zinc-200 rounded px-1.5 py-0.5">
+                  <span className="text-[10px] text-muted-foreground border border-border rounded px-1.5 py-0.5">
                     {a.template_id}
                   </span>
                 )}
-                <span className="text-xs text-zinc-400 num flex-1">
+                <span className="text-xs text-muted-foreground num flex-1">
                   {new Date(a.created_at).toLocaleDateString('en-SG', {
                     day: 'numeric',
                     month: 'short',

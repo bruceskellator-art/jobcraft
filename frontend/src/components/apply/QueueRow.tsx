@@ -70,8 +70,8 @@ export function QueueRow({ item, isSelected, isChecked, onSelect, onCheck }: Que
         <div className="flex items-center gap-2">
           <CompanyLogo company={job.company} size="sm" />
           <div>
-            <p className="text-sm font-semibold text-zinc-900 leading-tight">{job.title}</p>
-            <p className="text-xs text-zinc-500 mt-0.5">{job.company}</p>
+            <p className="text-sm font-semibold text-foreground leading-tight">{job.title}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{job.company}</p>
             <div className="flex flex-wrap gap-1 mt-1">
               <span className="source-pill">{sourceLabel(job.source)}</span>
               {titleSkills.map(skill => (
@@ -84,7 +84,7 @@ export function QueueRow({ item, isSelected, isChecked, onSelect, onCheck }: Que
         </div>
       </td>
 
-      <td className="px-3 py-3 text-xs text-zinc-400 num">—</td>
+      <td className="px-3 py-3 text-xs text-muted-foreground num">—</td>
 
       <td className="px-3 py-3">
         <span className={`chip ${scoreColor(confidence)}`}>

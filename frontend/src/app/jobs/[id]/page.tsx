@@ -89,8 +89,8 @@ export default function JobDetailPage() {
     return (
       <>
         <Toaster />
-        <header className="h-14 bg-white border-b border-zinc-200 flex items-center px-6 sticky top-0 z-10">
-          <Link href="/jobs" className="text-zinc-400 hover:text-zinc-700 text-sm">
+        <header className="h-14 bg-card border-b border-border flex items-center px-6 sticky top-0 z-10">
+          <Link href="/jobs" className="text-muted-foreground hover:text-foreground text-sm">
             ← Jobs
           </Link>
         </header>
@@ -105,8 +105,8 @@ export default function JobDetailPage() {
     return (
       <>
         <Toaster />
-        <header className="h-14 bg-white border-b border-zinc-200 flex items-center px-6 sticky top-0 z-10">
-          <Link href="/jobs" className="text-zinc-400 hover:text-zinc-700 text-sm">
+        <header className="h-14 bg-card border-b border-border flex items-center px-6 sticky top-0 z-10">
+          <Link href="/jobs" className="text-muted-foreground hover:text-foreground text-sm">
             ← Jobs
           </Link>
         </header>
@@ -133,16 +133,16 @@ export default function JobDetailPage() {
       <Toaster />
 
       {/* Header */}
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Link href="/jobs" className="text-zinc-400 hover:text-zinc-700 text-sm">
+          <Link href="/jobs" className="text-muted-foreground hover:text-foreground text-sm">
             ← Jobs
           </Link>
           <div className="flex items-center gap-2.5">
             <CompanyLogo company={displayCompany} size="md" />
             <div>
               <h1 className="text-sm font-semibold">{displayTitle}</h1>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-muted-foreground">
                 {displayCompany}
                 {locationText ? ` · ${locationText}` : ''}
                 {seniority ? ` · ${seniority}` : ''}
@@ -169,26 +169,26 @@ export default function JobDetailPage() {
         {match ? (
           <MatchBreakdown match={match} />
         ) : (
-          <section className="bg-white border border-zinc-200 rounded-xl px-4 py-6 text-sm text-zinc-400 text-center">
-            No match score yet — click <strong className="text-zinc-600">Run matches</strong> on the jobs list to compute it.
+          <section className="bg-card border border-border rounded-xl px-4 py-6 text-sm text-muted-foreground text-center">
+            No match score yet — click <strong className="text-muted-foreground">Run matches</strong> on the jobs list to compute it.
           </section>
         )}
 
         {/* Extracted from listing */}
         {job.extracted && (
-          <section className="bg-white border border-zinc-200 rounded-xl">
-            <div className="px-4 py-3 border-b border-zinc-200 flex items-center gap-2">
+          <section className="bg-card border border-border rounded-xl">
+            <div className="px-4 py-3 border-b border-border flex items-center gap-2">
               <h2 className="text-sm font-semibold">Extracted from listing</h2>
               <span className="source-pill">{sourceLabel(job.source)}</span>
             </div>
             <div className="p-4 text-sm space-y-4">
               {job.extracted.summary && (
-                <p className="text-zinc-600 leading-relaxed">{job.extracted.summary}</p>
+                <p className="text-muted-foreground leading-relaxed">{job.extracted.summary}</p>
               )}
 
               {job.extracted.required_skills.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                     Required skills
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -203,7 +203,7 @@ export default function JobDetailPage() {
 
               {job.extracted.preferred_skills.length > 0 && (
                 <div>
-                  <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-2">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                     Preferred skills
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -220,18 +220,18 @@ export default function JobDetailPage() {
                 <div className="flex items-center gap-6">
                   {salaryText && (
                     <div>
-                      <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                         Salary (extracted)
                       </div>
-                      <div className="num font-semibold text-zinc-800">{salaryText}</div>
+                      <div className="num font-semibold text-foreground">{salaryText}</div>
                     </div>
                   )}
                   {locationText && (
                     <div>
-                      <div className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
                         Work arrangement
                       </div>
-                      <div className="text-sm text-zinc-700">{locationText}</div>
+                      <div className="text-sm text-foreground">{locationText}</div>
                     </div>
                   )}
                 </div>

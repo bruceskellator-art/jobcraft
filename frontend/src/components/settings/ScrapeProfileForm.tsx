@@ -33,15 +33,15 @@ function TagInput({ label, hint, values, onChange }: TagInputProps) {
 
   return (
     <div>
-      <label className="block text-xs text-zinc-500 mb-1">{label}</label>
-      <div className="flex flex-wrap gap-1 border border-zinc-200 rounded-lg px-2 py-1.5 min-h-[36px] focus-within:ring-1 focus-within:ring-zinc-400">
+      <label className="block text-xs text-muted-foreground mb-1">{label}</label>
+      <div className="flex flex-wrap gap-1 border border-border rounded-lg px-2 py-1.5 min-h-[36px] focus-within:ring-1 focus-within:ring-border">
         {values.map((v, i) => (
-          <span key={i} className="inline-flex items-center gap-1 bg-zinc-100 text-zinc-700 text-xs rounded px-2 py-0.5">
+          <span key={i} className="inline-flex items-center gap-1 bg-muted text-foreground text-xs rounded px-2 py-0.5">
             {v}
             <button
               type="button"
               onClick={() => onChange(values.filter((_, j) => j !== i))}
-              className="text-zinc-400 hover:text-zinc-700 leading-none"
+              className="text-muted-foreground hover:text-foreground leading-none"
               aria-label={`Remove ${v}`}
             >
               ×
@@ -55,10 +55,10 @@ function TagInput({ label, hint, values, onChange }: TagInputProps) {
           onKeyDown={handleKeyDown}
           onBlur={commit}
           placeholder={values.length === 0 ? 'Type and press Enter' : ''}
-          className="flex-1 min-w-[120px] text-xs outline-none bg-transparent placeholder:text-zinc-300"
+          className="flex-1 min-w-[120px] text-xs outline-none bg-transparent placeholder:text-muted-foreground"
         />
       </div>
-      {hint && <p className="mt-1 text-xs text-zinc-400">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   )
 }
@@ -114,26 +114,26 @@ export function ScrapeProfileForm({ initial, onSave, onRun, isSaving, isRunning 
 
       <div className="flex items-center gap-4 pt-1">
         <div>
-          <label className="block text-xs text-zinc-500 mb-1">Lookback days</label>
+          <label className="block text-xs text-muted-foreground mb-1">Lookback days</label>
           <input
             type="number"
             min={1}
             max={90}
             value={config.posted_within_days}
             onChange={e => update('posted_within_days', Math.min(90, Math.max(1, Number(e.target.value))))}
-            className="w-20 border border-zinc-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-zinc-400"
+            className="w-20 border border-border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-border"
           />
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-zinc-600 cursor-pointer pt-4">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pt-4">
           <input
             type="checkbox"
             checked={config.extract}
             onChange={e => update('extract', e.target.checked)}
-            className="rounded border-zinc-300"
+            className="rounded border-border"
           />
           Extract with AI
-          <span className="text-zinc-400">(slower — populates salary, seniority, tech stack)</span>
+          <span className="text-muted-foreground">(slower — populates salary, seniority, tech stack)</span>
         </label>
       </div>
 
@@ -142,7 +142,7 @@ export function ScrapeProfileForm({ initial, onSave, onRun, isSaving, isRunning 
           type="button"
           disabled={isSaving}
           onClick={() => onSave(config)}
-          className="px-3 py-1.5 text-xs font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-1.5 text-xs font-medium bg-foreground text-white rounded-lg hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSaving ? 'Saving…' : 'Save'}
         </button>
@@ -150,7 +150,7 @@ export function ScrapeProfileForm({ initial, onSave, onRun, isSaving, isRunning 
           type="button"
           disabled={isRunning}
           onClick={handleRun}
-          className="px-3 py-1.5 text-xs font-medium border border-zinc-200 text-zinc-700 rounded-lg hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          className="px-3 py-1.5 text-xs font-medium border border-border text-foreground rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
         >
           {isRunning ? (
             <>
@@ -165,25 +165,25 @@ export function ScrapeProfileForm({ initial, onSave, onRun, isSaving, isRunning 
       </div>
 
       {lastResult && (
-        <div className="mt-2 border border-zinc-100 rounded-lg overflow-hidden">
-          <div className="px-3 py-2 bg-zinc-50 border-b border-zinc-100 flex items-center justify-between">
-            <span className="text-xs font-medium text-zinc-700">Last run — {lastResult.created} new jobs</span>
+        <div className="mt-2 border border-border rounded-lg overflow-hidden">
+          <div className="px-3 py-2 bg-muted border-b border-border flex items-center justify-between">
+            <span className="text-xs font-medium text-foreground">Last run — {lastResult.created} new jobs</span>
           </div>
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-zinc-400 border-b border-zinc-100">
+              <tr className="text-left text-muted-foreground border-b border-border">
                 <th className="px-3 py-2 font-medium">Source</th>
                 <th className="px-3 py-2 font-medium text-right">Listed</th>
                 <th className="px-3 py-2 font-medium text-right">New</th>
                 <th className="px-3 py-2 font-medium text-right">Failed</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-50">
+            <tbody className="divide-y divide-border">
               {lastResult.runs.flatMap(r => {
                 const rows = [
                   <tr key={r.source}>
-                    <td className="px-3 py-2 text-zinc-700 font-medium">{r.source}</td>
-                    <td className="px-3 py-2 text-right text-zinc-500">{r.total_listed}</td>
+                    <td className="px-3 py-2 text-foreground font-medium">{r.source}</td>
+                    <td className="px-3 py-2 text-right text-muted-foreground">{r.total_listed}</td>
                     <td className="px-3 py-2 text-right font-medium text-emerald-600">{r.total_new}</td>
                     <td className="px-3 py-2 text-right text-rose-500">{r.total_failed > 0 ? r.total_failed : '—'}</td>
                   </tr>,

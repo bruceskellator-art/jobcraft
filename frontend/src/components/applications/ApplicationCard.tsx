@@ -100,11 +100,11 @@ export function ApplicationCard({ application, job, onStatusChange }: Applicatio
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-zinc-700 truncate">{company}</span>
+            <span className="text-xs font-semibold text-foreground truncate">{company}</span>
             {source && <span className="source-pill">{source.slice(0, 3).toUpperCase()}</span>}
           </div>
           {timeAgo && (
-            <div className="text-[0.68rem] text-zinc-400">Singapore · {timeAgo}</div>
+            <div className="text-[0.68rem] text-muted-foreground">Singapore · {timeAgo}</div>
           )}
         </div>
         {matchScore !== null && (
@@ -114,7 +114,7 @@ export function ApplicationCard({ application, job, onStatusChange }: Applicatio
         )}
       </div>
 
-      <div className="text-sm font-medium text-zinc-800 leading-snug">{title}</div>
+      <div className="text-sm font-medium text-foreground leading-snug">{title}</div>
 
       {skills.length > 0 && (
         <div className="flex flex-wrap gap-1">
@@ -128,7 +128,7 @@ export function ApplicationCard({ application, job, onStatusChange }: Applicatio
 
       <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
         <Select value={application.status} onValueChange={handleStatusValueChange}>
-          <SelectTrigger size="sm" className="w-full text-xs text-zinc-500">
+          <SelectTrigger size="sm" className="w-full text-xs text-muted-foreground">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

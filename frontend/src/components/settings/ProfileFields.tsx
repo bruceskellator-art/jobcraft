@@ -64,7 +64,7 @@ export function ProfileFields({ fields, onSave, onAdd }: ProfileFieldsProps) {
             <div key={field.key}>
               <label
                 className={`block text-xs font-medium mb-1 ${
-                  isKnockout ? 'text-amber-700' : 'text-zinc-600'
+                  isKnockout ? 'text-amber-700' : 'text-muted-foreground'
                 }`}
               >
                 {field.key}
@@ -74,10 +74,10 @@ export function ProfileFields({ fields, onSave, onAdd }: ProfileFieldsProps) {
                 type="text"
                 value={currentValue}
                 disabled={isSavingThis}
-                className={`w-full border rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`w-full border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                   isKnockout
                     ? 'border-amber-300'
-                    : 'border-zinc-200'
+                    : 'border-border'
                 } ${isSavingThis ? 'opacity-50' : ''}`}
                 onChange={e => setEditing({ key: field.key, value: e.target.value })}
                 onFocus={() => {
@@ -93,31 +93,31 @@ export function ProfileFields({ fields, onSave, onAdd }: ProfileFieldsProps) {
       </div>
 
       {/* Add field */}
-      <div className="border-t border-zinc-100 pt-3">
-        <p className="text-xs font-medium text-zinc-600 mb-2">Add field</p>
+      <div className="border-t border-border pt-3">
+        <p className="text-xs font-medium text-muted-foreground mb-2">Add field</p>
         <div className="grid grid-cols-2 gap-2">
           <input
             type="text"
             placeholder="Field key"
             value={newKey}
             onChange={e => setNewKey(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <input
             type="text"
             placeholder="Value"
             value={newValue}
             onChange={e => setNewValue(e.target.value)}
-            className="border border-zinc-200 rounded-lg px-3 py-1.5 text-sm bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
         <div className="flex items-center gap-3 mt-2">
-          <label className="flex items-center gap-1.5 text-xs text-zinc-600 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
             <input
               type="checkbox"
               checked={newIsKnockout}
               onChange={e => setNewIsKnockout(e.target.checked)}
-              className="rounded border-zinc-300"
+              className="rounded border-border"
             />
             Knockout field
           </label>

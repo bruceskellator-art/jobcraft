@@ -125,10 +125,10 @@ export default function AdminEvalsPage() {
   return (
     <>
       <Toaster />
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-between px-6 sticky top-0 z-10">
+      <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
         <div>
           <h1 className="text-sm font-semibold">Evals</h1>
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-muted-foreground">
             Prompt quality over time — CI fails if a suite drops below baseline
           </p>
         </div>
@@ -180,8 +180,8 @@ export default function AdminEvalsPage() {
               </section>
             )}
 
-            <section className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+            <section className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
                 <h2 className="text-sm font-semibold">Recent runs</h2>
                 {failingCount > 0 ? (
                   <span className="text-xs text-rose-600 font-medium">
@@ -189,7 +189,7 @@ export default function AdminEvalsPage() {
                     {failingCount === 1 ? 's' : ''} attention
                   </span>
                 ) : (
-                  <span className="text-xs text-zinc-400">All suites passing</span>
+                  <span className="text-xs text-muted-foreground">All suites passing</span>
                 )}
               </div>
 
@@ -197,7 +197,7 @@ export default function AdminEvalsPage() {
                 <div className="empty py-12">No eval runs yet.</div>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-zinc-50/80 text-zinc-500 text-xs border-b border-zinc-100">
+                  <thead className="bg-muted/80 text-muted-foreground text-xs border-b border-border">
                     <tr className="text-left">
                       <th className="px-4 py-2.5 font-medium">Suite</th>
                       <th className="px-2 py-2.5 font-medium">Prompt version</th>
@@ -208,7 +208,7 @@ export default function AdminEvalsPage() {
                       <th className="px-2 py-2.5 font-medium">Started</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-zinc-100">
+                  <tbody className="divide-y divide-border">
                     {runs.map((run) => (
                       <EvalRunRow
                         key={run.id}
@@ -221,11 +221,11 @@ export default function AdminEvalsPage() {
               )}
             </section>
 
-            <section className="bg-white border border-zinc-200 rounded-xl p-4">
+            <section className="bg-card border border-border rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">Run a suite</h2>
               <div className="flex items-center gap-3">
                 <Select value={selectedSuite} onValueChange={(v) => { if (v !== null) setSelectedSuite(v) }}>
-                  <SelectTrigger className="text-sm text-zinc-700">
+                  <SelectTrigger className="text-sm text-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

@@ -27,12 +27,12 @@ export function DimensionBar({ label, score }: DimensionBarProps) {
   return (
     <div>
       <div className="flex justify-between mb-1.5">
-        <span className="text-zinc-600 text-sm">{formatLabel(label)}</span>
+        <span className="text-muted-foreground text-sm">{formatLabel(label)}</span>
         <span className={`num font-semibold text-sm ${scoreColorClass(score)}`}>
           {score.toFixed(2)}
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-zinc-100">
+      <div className="h-1.5 rounded-full bg-muted">
         <div
           className={`h-full rounded-full ${barColorClass(score)}`}
           style={{ width: `${pct}%` }}

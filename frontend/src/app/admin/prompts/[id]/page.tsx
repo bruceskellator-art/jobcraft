@@ -64,16 +64,16 @@ export default function PromptDetailPage() {
 
   return (
     <>
-      <header className="h-14 bg-white border-b border-zinc-200 flex items-center gap-3 px-6 sticky top-0 z-10">
-        <Link href="/admin/prompts" className="text-xs text-zinc-400 hover:text-zinc-600">
+      <header className="h-14 bg-card border-b border-border flex items-center gap-3 px-6 sticky top-0 z-10">
+        <Link href="/admin/prompts" className="text-xs text-muted-foreground hover:text-muted-foreground">
           ← Prompts
         </Link>
-        <div className="h-4 w-px bg-zinc-200" />
+        <div className="h-4 w-px bg-border" />
         <h1 className="text-sm font-semibold">Prompt Detail</h1>
         {prompt && (
           <>
-            <span className="text-xs text-zinc-400">{prompt.name}</span>
-            <span className="num text-xs text-zinc-500">v{prompt.version}</span>
+            <span className="text-xs text-muted-foreground">{prompt.name}</span>
+            <span className="num text-xs text-muted-foreground">v{prompt.version}</span>
           </>
         )}
       </header>
@@ -90,25 +90,25 @@ export default function PromptDetailPage() {
         {!isLoading && !loadError && prompt && (
           <>
             {/* Meta */}
-            <div className="bg-white border border-zinc-200 rounded-xl p-4 flex flex-wrap gap-6 text-sm">
+            <div className="bg-card border border-border rounded-xl p-4 flex flex-wrap gap-6 text-sm">
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Name</div>
+                <div className="text-xs text-muted-foreground mb-1">Name</div>
                 <span className="text-sm font-semibold">{prompt.name}</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Version</div>
+                <div className="text-xs text-muted-foreground mb-1">Version</div>
                 <span className="num font-semibold">v{prompt.version}</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Model</div>
+                <div className="text-xs text-muted-foreground mb-1">Model</div>
                 <span className={getModelBadgeClass(prompt.model)}>{prompt.model}</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Temperature</div>
+                <div className="text-xs text-muted-foreground mb-1">Temperature</div>
                 <span className="num text-xs">{prompt.temperature}</span>
               </div>
               <div>
-                <div className="text-xs text-zinc-500 mb-1">Status</div>
+                <div className="text-xs text-muted-foreground mb-1">Status</div>
                 {prompt.is_active ? (
                   <span className="badge badge-submitted">
                     <span className="dot" style={{ background: '#10b981' }} />
@@ -121,22 +121,22 @@ export default function PromptDetailPage() {
             </div>
 
             {/* Template */}
-            <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-zinc-100">
+            <div className="bg-card border border-border rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border">
                 <h2 className="text-sm font-semibold">Template</h2>
               </div>
-              <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-zinc-700">
+              <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-foreground">
                 {prompt.template}
               </pre>
             </div>
 
             {/* Metadata */}
             {Object.keys(prompt.metadata).length > 0 && (
-              <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-100">
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-border">
                   <h2 className="text-sm font-semibold">Metadata</h2>
                 </div>
-                <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-zinc-700">
+                <pre className="p-4 text-xs leading-relaxed overflow-x-auto font-mono whitespace-pre-wrap text-foreground">
                   {JSON.stringify(prompt.metadata, null, 2)}
                 </pre>
               </div>

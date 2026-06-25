@@ -25,15 +25,15 @@ function StatusArrow({ from, to }: { from: string | null; to: string }) {
   const label = (s: string) =>
     s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
   return (
-    <span className="text-xs text-zinc-600 font-medium">
+    <span className="text-xs text-muted-foreground font-medium">
       {from ? (
         <>
-          <span className="text-zinc-400">{label(from)}</span>
-          <span className="mx-1.5 text-zinc-300">→</span>
-          <span className="text-zinc-800">{label(to)}</span>
+          <span className="text-muted-foreground">{label(from)}</span>
+          <span className="mx-1.5 text-muted-foreground">→</span>
+          <span className="text-foreground">{label(to)}</span>
         </>
       ) : (
-        <span className="text-zinc-800">{label(to)}</span>
+        <span className="text-foreground">{label(to)}</span>
       )}
     </span>
   )
@@ -69,7 +69,7 @@ function EventRow({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-zinc-400">{event.classification}</span>
+          <span className="text-xs text-muted-foreground">{event.classification}</span>
           <span className={`chip ${chipClass}`}>
             {event.confidence.toFixed(2)}
           </span>
@@ -164,7 +164,7 @@ export function ProposedEvents({ onBoardRefresh }: ProposedEventsProps) {
   if (isLoading || events.length === 0) return null
 
   return (
-    <div className="mb-5 bg-white border border-indigo-200 rounded-xl overflow-hidden">
+    <div className="mb-5 bg-card border border-indigo-200 rounded-xl overflow-hidden">
       <div className="px-4 py-2.5 bg-indigo-50 border-b border-indigo-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="col-dot" style={{ background: '#6366f1' }} />
@@ -180,7 +180,7 @@ export function ProposedEvents({ onBoardRefresh }: ProposedEventsProps) {
         </p>
       </div>
 
-      <div className="divide-y divide-zinc-100">
+      <div className="divide-y divide-border">
         {events.map((event) => (
           <EventRow
             key={event.id}

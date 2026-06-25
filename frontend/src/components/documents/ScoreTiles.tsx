@@ -22,8 +22,8 @@ export function ScoreTiles({ scores }: ScoreTilesProps) {
         const value = scores[key]
         const variant = scoreColor(value)
         return (
-          <div key={key} className="bg-zinc-50 rounded-lg p-3">
-            <div className="text-xs text-zinc-500 mb-2">{label}</div>
+          <div key={key} className="bg-muted rounded-lg p-3">
+            <div className="text-xs text-muted-foreground mb-2">{label}</div>
             <span className={`chip ${variant}`}>{value.toFixed(2)}</span>
           </div>
         )

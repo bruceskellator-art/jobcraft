@@ -66,7 +66,7 @@ export function JobRow({ job }: JobRowProps) {
           href={job.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-semibold text-zinc-900 hover:underline text-sm"
+          className="font-semibold text-foreground hover:underline text-sm"
           style={{ textDecorationColor: '#6366f1' }}
         >
           {displayTitle}
@@ -89,17 +89,17 @@ export function JobRow({ job }: JobRowProps) {
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <CompanyLogo company={displayCompany} size="sm" />
-          <span className="text-sm font-medium text-zinc-700">{displayCompany}</span>
+          <span className="text-sm font-medium text-foreground">{displayCompany}</span>
         </div>
       </td>
 
       {/* Location */}
-      <td className="px-4 py-3 text-xs text-zinc-500">
-        {locationText || <span className="text-zinc-300">—</span>}
+      <td className="px-4 py-3 text-xs text-muted-foreground">
+        {locationText || <span className="text-muted-foreground">—</span>}
       </td>
 
       {/* Age */}
-      <td className="px-4 py-3 text-xs text-zinc-400 num">{age}</td>
+      <td className="px-4 py-3 text-xs text-muted-foreground num">{age}</td>
 
       {/* Action */}
       <td className="px-4 py-3 text-right">

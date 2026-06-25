@@ -75,8 +75,8 @@ export function ExperienceForm({ open, onOpenChange, initialData, onSave, isSavi
     }
   }
 
-  const inputClass = 'w-full border border-zinc-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/40'
-  const labelClass = 'block text-xs font-medium text-zinc-600 mb-1'
+  const inputClass = 'w-full border border-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/40'
+  const labelClass = 'block text-xs font-medium text-muted-foreground mb-1'
 
   function handleOpenChange(next: boolean) {
     if (!next && isSaving) return

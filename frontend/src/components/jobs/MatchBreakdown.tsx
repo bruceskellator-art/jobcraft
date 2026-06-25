@@ -26,8 +26,8 @@ export function MatchBreakdown({ match }: MatchBreakdownProps) {
   const dimensions = Object.entries(match.dimension_scores)
 
   return (
-    <section className="bg-white border border-zinc-200 rounded-xl">
-      <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between">
+    <section className="bg-card border border-border rounded-xl">
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-sm font-semibold">Match breakdown</h2>
         <span className={overallChipClass(match.overall_score)}>
           {Math.round(match.overall_score * 100)}%
@@ -44,7 +44,7 @@ export function MatchBreakdown({ match }: MatchBreakdownProps) {
 
       {match.gaps.length > 0 && (
         <div className="px-4 pb-4">
-          <div className="text-xs font-semibold text-zinc-500 mb-2 uppercase tracking-wide">
+          <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
             Gaps to address
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -65,7 +65,7 @@ export function MatchBreakdown({ match }: MatchBreakdownProps) {
 
       {match.rationale && (
         <div className="px-4 pb-4">
-          <p className="text-xs text-zinc-500 leading-relaxed">{match.rationale}</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">{match.rationale}</p>
         </div>
       )}
     </section>
