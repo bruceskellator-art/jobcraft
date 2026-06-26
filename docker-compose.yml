@@ -30,18 +30,23 @@ services:
       - qdrantdata:/qdrant/storage
     restart: unless-stopped
 
-  # redis:
-  #   image: redis:7
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redisdata:/data
-  #   restart: unless-stopped
-  #
-  # Uncomment in Phase 6 when arq workers are introduced.
-  # JOBCRAFT_REDIS_URL=redis://localhost:6379
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    # Backs the arq workers (apply/email pipelines + background scrape dispatch).
+    # JOBCRAFT_REDIS_URL=redis://localhost:6379
+    # Start the scrape worker:  arq app.workers.scrape_worker.WorkerSettings
 
 volumes:
   pgdata:
   qdrantdata:
-  # redisdata:
+  redisdata:

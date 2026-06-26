@@ -140,9 +140,17 @@ pip install -e '.[dev]'
 cp .env.example .env          # add ANTHROPIC_API_KEY (or DEEPSEEK_API_KEY)
 alembic upgrade head
 uvicorn app.main:app --reload  # http://localhost:8000
+# new terminal — background scrape worker (Redis/arq):
+arq app.workers.scrape_worker.WorkerSettings
 # new terminal:
 cd frontend && pnpm install && pnpm dev  # http://localhost:3000
 ```
+
+Background scrapes dispatch onto Redis and are executed by the `arq` worker above,
+so they scale across worker processes and survive API restarts. Set
+`JOBCRAFT_SCRAPE_DISPATCH_MODE=inprocess` to skip Redis and run scrapes inside the
+API process instead (single-process; used automatically as a fallback when Redis
+is unreachable).
 
 **Without Docker (DeepSeek + SQLite — no Postgres/Qdrant/Redis needed):**
 ```bash
@@ -159,6 +167,9 @@ pip install -e '.[dev]'
 
 python ../scripts/create_db.py   # creates schema from ORM models
 alembic stamp head                # marks migrations as current
+
+# add to backend/.env to run scrapes in-process (no Redis):
+#   JOBCRAFT_SCRAPE_DISPATCH_MODE=inprocess
 uvicorn app.main:app --reload     # http://localhost:8000
 
 # new terminal:

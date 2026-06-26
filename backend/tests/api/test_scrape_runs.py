@@ -8,7 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_session
-from app.deps import get_session_factory, get_source_factory, get_task_scheduler
+from app.deps import get_scrape_dispatcher
 from app.main import create_app
 from app.scrapers.types import JobFilters, RawJobPosting
 from app.services.scrape import execute_scrape_run
@@ -58,46 +58,43 @@ class _SameSessionFactory:
         return _Ctx()
 
 
+def _fake_source_build(
+    greenhouse_boards, lever_companies, mcf_keywords=None, linkedin_keywords=None
+):
+    """Source factory that yields one fake posting per greenhouse board, no network."""
+    return [_FakeSource(f"greenhouse:{b}", [_RAW]) for b in greenhouse_boards]
+
+
+class _CapturingDispatcher:
+    """Records dispatched run ids instead of executing them in the background.
+
+    Lets tests assert a run was dispatched, then run it deterministically by
+    calling execute_scrape_run directly (simulating the arq worker).
+    """
+
+    def __init__(self) -> None:
+        self.run_ids: list = []
+
+    async def dispatch(self, run_id) -> None:  # noqa: ANN001
+        self.run_ids.append(run_id)
+
+
 @pytest_asyncio.fixture
-async def captured_scheduler():
-    """Capture scheduled coroutines instead of running them in the background."""
-    captured: list = []
-
-    def _factory():
-        return captured.append
-
-    return captured, _factory
-
-
-@pytest_asyncio.fixture
-async def client(session: AsyncSession, captured_scheduler):  # type: ignore[misc]
-    captured, scheduler_factory = captured_scheduler
+async def client(session: AsyncSession):  # type: ignore[misc]
     application = create_app()
+    dispatcher = _CapturingDispatcher()
 
     async def _override_session():  # type: ignore[return]
         yield session
 
-    def _fake_source_factory():
-        def _build(greenhouse_boards, lever_companies, mcf_keywords=None, linkedin_keywords=None):
-            return [_FakeSource(f"greenhouse:{b}", [_RAW]) for b in greenhouse_boards]
-
-        return _build
-
     application.dependency_overrides[get_session] = _override_session
-    application.dependency_overrides[get_source_factory] = _fake_source_factory
-    application.dependency_overrides[get_session_factory] = lambda: _SameSessionFactory(session)
-    application.dependency_overrides[get_task_scheduler] = scheduler_factory
+    application.dependency_overrides[get_scrape_dispatcher] = lambda: dispatcher
 
     async with AsyncClient(
         transport=ASGITransport(app=application), base_url="http://test"
     ) as ac:
-        yield ac, captured
+        yield ac, dispatcher
 
-    # Close any scheduled-but-never-run coroutines to avoid "never awaited" warnings.
-    for coro in captured:
-        close = getattr(coro, "close", None)
-        if callable(close):
-            close()
     application.dependency_overrides.clear()
 
 
@@ -134,15 +131,20 @@ async def test_get_unknown_run_returns_404(client) -> None:
 
 @pytest.mark.asyncio
 async def test_background_run_succeeds_and_records_results(client, session) -> None:
-    ac, captured = client
+    ac, dispatcher = client
     enqueue = await ac.post(
         "/api/jobs/scrape/runs", json={"greenhouse_boards": ["acme"]}
     )
     run_id = enqueue.json()["id"]
 
-    # Exactly one coroutine was scheduled; run it now (deterministically).
-    assert len(captured) == 1
-    await captured[0]
+    # Exactly one run was dispatched; execute it now (simulating the worker).
+    assert len(dispatcher.run_ids) == 1
+    await execute_scrape_run(
+        dispatcher.run_ids[0],
+        session_factory=_SameSessionFactory(session),
+        source_factory=_fake_source_build,
+        llm_factory=None,
+    )
 
     fetched = await ac.get(f"/api/jobs/scrape/runs/{run_id}")
     body = fetched.json()
@@ -161,14 +163,14 @@ async def test_execute_scrape_run_marks_failed_on_source_error(session: AsyncSes
     run = await repo.create(_USER_ID, {"greenhouse_boards": ["acme"]})
     await session.commit()
 
-    def _explode() -> list:
+    def _explode(*args, **kwargs) -> list:
         raise RuntimeError("boom building sources")
 
     await execute_scrape_run(
         run.id,
         session_factory=_SameSessionFactory(session),
-        build_sources=_explode,
-        filters=JobFilters(),
+        source_factory=_explode,
+        llm_factory=None,
     )
 
     refreshed = await repo.get(run.id)

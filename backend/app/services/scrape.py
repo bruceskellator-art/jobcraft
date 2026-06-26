@@ -114,32 +114,50 @@ async def execute_scrape_run(
     run_id: uuid.UUID,
     *,
     session_factory: async_sessionmaker[AsyncSession],
-    build_sources: Callable[[], list[JobSource]],
-    filters: JobFilters,
-    build_llm: Callable[[AsyncSession], LLMClient] | None = None,
-    extract: bool = False,
+    source_factory: Callable[..., list[JobSource]],
+    llm_factory: Callable[[AsyncSession], LLMClient] | None = None,
 ) -> None:
     """Run a scrape in the background, recording lifecycle + results on the ScrapeRun row.
+
+    Reconstructs the request (boards/companies/keywords, filters, extract flag) from
+    the persisted ``ScrapeRun.request`` snapshot, so the only argument the caller —
+    whether the in-process scheduler or an arq worker — must carry across the
+    boundary is the ``run_id``.
 
     Owns its own DB session (the request that enqueued it has already returned).
     Never raises: any failure is captured and persisted as status='failed' so the
     UI can surface it. Sources' HTTP clients are always closed.
     """
+    from app.schemas.job import ScrapeRequest  # local import avoids an import cycle
+
     async with session_factory() as session:
         repo = ScrapeRunRepository(session)
+        run = await repo.get(run_id)
+        if run is None:
+            logger.warning("execute_scrape_run: run %s not found; skipping", run_id)
+            return
+
+        request = ScrapeRequest.model_validate(run.request or {})
         await repo.mark_running(run_id)
         await session.commit()
 
         sources: list[JobSource] = []
         try:
-            sources = build_sources()
-            llm = build_llm(session) if (extract and build_llm is not None) else None
+            sources = source_factory(
+                request.greenhouse_boards, request.lever_companies,
+                request.mcf_keywords, request.linkedin_keywords,
+            )
+            llm = (
+                llm_factory(session)
+                if (request.extract and llm_factory is not None)
+                else None
+            )
             created, logs = await run_scrape(
                 session=session,
                 sources=sources,
-                filters=filters,
+                filters=request.filters,
                 llm=llm,
-                extract=extract,
+                extract=request.extract,
             )
             await session.commit()
             await repo.mark_finished(

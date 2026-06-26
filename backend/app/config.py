@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379/0")
     cors_origins: list[str] = Field(default=["http://localhost:3000"])
 
+    # How background scrape runs are dispatched.
+    # JOBCRAFT_SCRAPE_DISPATCH_MODE=arq       → enqueue onto Redis/arq workers (scales
+    #                                            horizontally; survives API restarts).
+    # JOBCRAFT_SCRAPE_DISPATCH_MODE=inprocess → run in-process via asyncio (zero infra,
+    #                                            single-process only — the no-Docker path).
+    # When "arq" but Redis is unreachable at startup, the app logs a warning and
+    # transparently falls back to in-process dispatch so local dev keeps working.
+    scrape_dispatch_mode: Literal["arq", "inprocess"] = Field(default="arq")
+
     # Provider selection — lets you run with only a DeepSeek key (no Anthropic/OpenAI/Qdrant).
     # JOBCRAFT_LLM_PROVIDER=deepseek  → use DeepSeek (needs DEEPSEEK_API_KEY)
     # JOBCRAFT_LLM_PROVIDER=openai    → use OpenAI  (needs OPENAI_API_KEY)

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-from collections.abc import Awaitable, Callable
+import logging
+from collections.abc import Callable
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -29,9 +29,16 @@ from app.scrapers.greenhouse import GreenhouseSource
 from app.scrapers.lever import LeverSource
 from app.scrapers.linkedin import LinkedInSource
 from app.scrapers.mycareersfuture import MyCareersFutureSource
+from app.services.scrape_dispatch import (
+    ArqScrapeDispatcher,
+    InProcessScrapeDispatcher,
+    ScrapeDispatcher,
+)
 from app.vectorstore.base import VectorStore
 from app.vectorstore.memory import InMemoryVectorStore
 from app.vectorstore.qdrant_adapter import QdrantVectorStore
+
+logger = logging.getLogger(__name__)
 
 # Phase-1 stand-in for real authentication.
 # Returns (or creates) a single fixed developer user so that all routes
@@ -226,32 +233,6 @@ def get_email_provider(account: EmailAccount) -> EmailProvider:
     )
 
 
-# Holds strong references to in-flight background tasks so they are not
-# garbage-collected mid-run (asyncio only keeps weak references).
-_background_tasks: set[asyncio.Task] = set()
-
-
-def get_task_scheduler() -> Callable[[Awaitable[None]], None]:
-    """Return a function that schedules a coroutine as a fire-and-forget task.
-
-    Used for in-process background work (e.g. scrape runs) without a Redis/arq
-    dependency — suitable for the single-user local deployment.
-
-    In tests, override this dependency to run the coroutine synchronously or to
-    capture it without executing, avoiding background races:
-
-        scheduled = []
-        app.dependency_overrides[get_task_scheduler] = lambda: scheduled.append
-    """
-
-    def _schedule(coro: Awaitable[None]) -> None:
-        task = asyncio.create_task(coro)  # type: ignore[arg-type]
-        _background_tasks.add(task)
-        task.add_done_callback(_background_tasks.discard)
-
-    return _schedule
-
-
 def get_source_factory() -> Callable[[list[str], list[str], list[str], list[str]], list[JobSource]]:
     """Return a factory that builds JobSource instances from board/company/keyword lists.
 
@@ -292,3 +273,36 @@ def get_source_factory() -> Callable[[list[str], list[str], list[str], list[str]
         return sources
 
     return _build
+
+
+def get_scrape_dispatcher(
+    request: Request,
+    session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),  # noqa: B008
+    source_factory: Callable[..., list[JobSource]] = Depends(get_source_factory),  # noqa: B008
+    llm_factory: Callable[[AsyncSession], LLMClient] = Depends(get_llm_factory),  # noqa: B008
+) -> ScrapeDispatcher:
+    """Return the dispatcher used to run a persisted scrape run in the background.
+
+    Picks the arq/Redis dispatcher when a Redis pool was established at app
+    startup (``app.state.arq_pool``); otherwise falls back to the in-process
+    dispatcher. When JOBCRAFT_SCRAPE_DISPATCH_MODE=arq but Redis was unreachable,
+    a warning is logged so the degradation is visible.
+
+    In tests, override this dependency with a capturing dispatcher:
+
+        app.dependency_overrides[get_scrape_dispatcher] = lambda: capturing_dispatcher
+    """
+    pool = getattr(request.app.state, "arq_pool", None)
+    if pool is not None:
+        return ArqScrapeDispatcher(pool)
+
+    if get_settings().scrape_dispatch_mode == "arq":
+        logger.warning(
+            "scrape_dispatch_mode='arq' but no Redis pool is available — "
+            "falling back to in-process scrape dispatch."
+        )
+    return InProcessScrapeDispatcher(
+        session_factory=session_factory,
+        source_factory=source_factory,
+        llm_factory=llm_factory,
+    )
