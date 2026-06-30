@@ -64,7 +64,9 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     finally:
         pool = getattr(application.state, "arq_pool", None)
         if pool is not None:
-            await pool.close()
+            # arq's ArqRedis (redis>=5) prefers aclose(); fall back for older clients.
+            closer = getattr(pool, "aclose", None) or pool.close
+            await closer()
             logger.info("arq Redis pool closed")
 
 

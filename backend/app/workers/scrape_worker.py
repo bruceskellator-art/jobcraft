@@ -48,24 +48,37 @@ async def scrape_run_task(ctx: dict, run_id: str) -> dict:
         await engine.dispose()
 
 
+def _build_redis_settings() -> object | None:
+    """Build arq RedisSettings from app config.
+
+    Returns None if arq is unavailable so the module stays import-safe. Uses
+    from_dsn, which only parses the URL (no connection), so this is safe at
+    import time.
+    """
+    try:
+        import arq.connections  # noqa: PLC0415
+    except ImportError:
+        # arq not installed: stay import-safe (worker simply won't start).
+        logger.warning("arq is not installed; scrape worker will not start.")
+        return None
+
+    try:
+        from app.config import get_settings  # noqa: PLC0415
+
+        return arq.connections.RedisSettings.from_dsn(get_settings().redis_url)
+    except Exception:
+        # A real failure (bad DSN, settings error) — surface it with a traceback
+        # instead of silently collapsing into a confusing None.
+        logger.exception("Could not build RedisSettings; worker will not start.")
+        return None
+
+
 class WorkerSettings:
     """arq WorkerSettings for the scrape worker.
 
-    Redis URL is read from app settings at worker startup.
+    arq reads ``redis_settings`` as an attribute (it does not call it), so it
+    must be a RedisSettings instance — not a method.
     """
 
     functions = [scrape_run_task]
-
-    @staticmethod
-    def redis_settings() -> object:
-        """Return arq RedisSettings built from app config."""
-        try:
-            import arq.connections  # noqa: PLC0415
-
-            from app.config import get_settings  # noqa: PLC0415
-
-            url = get_settings().redis_url
-            return arq.connections.RedisSettings.from_dsn(url)
-        except Exception:
-            logger.warning("Could not build RedisSettings; worker will not start.")
-            return None
+    redis_settings = _build_redis_settings()
