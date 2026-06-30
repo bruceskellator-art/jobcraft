@@ -22,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 
 interface GenerationPanelProps {
   jobId: string
@@ -182,44 +189,103 @@ function TemplatePicker({
   onSelect: (id: string) => void
   disabled: boolean
 }) {
+  const [previewTemplate, setPreviewTemplate] = useState<ResumeTemplate | null>(null)
+
   return (
-    <div>
-      <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">
-        Template
-      </label>
-      <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
-        {templates.map(t => (
-          <button
-            key={t.id}
-            type="button"
-            disabled={disabled}
-            title={t.description}
-            onClick={() => onSelect(t.id)}
-            className={[
-              'flex-none flex flex-col items-center gap-1 rounded-lg border-2 p-1 transition-colors',
-              'focus:outline-none focus:ring-2 focus:ring-indigo-300',
-              selectedId === t.id
-                ? 'border-indigo-500 bg-indigo-50'
-                : 'border-border bg-card hover:border-border',
-              disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
-            ].join(' ')}
-            style={{ width: '72px' }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={t.thumbnail_url}
-              alt={t.name}
-              className="w-full rounded object-cover border border-border"
-              style={{ height: '90px' }}
-              loading="lazy"
-            />
-            <span className="text-[10px] text-muted-foreground text-center leading-tight line-clamp-2">
-              {t.name}
-            </span>
-          </button>
-        ))}
+    <>
+      <div>
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">
+          Template
+        </label>
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+          {templates.map(t => (
+            <div key={t.id} className="flex-none flex flex-col items-center gap-1" style={{ width: '72px' }}>
+              <div className="relative w-full group">
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onSelect(t.id)}
+                  className={[
+                    'w-full rounded-lg border-2 p-1 transition-colors',
+                    'focus:outline-none focus:ring-2 focus:ring-indigo-300',
+                    selectedId === t.id
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-border bg-card hover:border-border',
+                    disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                  ].join(' ')}
+                  aria-label={`Select ${t.name} template`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={t.thumbnail_url}
+                    alt={t.name}
+                    className="w-full rounded object-cover border border-border"
+                    style={{ height: '90px' }}
+                    loading="lazy"
+                  />
+                </button>
+                {/* Preview icon overlay */}
+                <button
+                  type="button"
+                  onClick={() => setPreviewTemplate(t)}
+                  className="absolute top-1 right-1 w-5 h-5 rounded bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  aria-label={`Preview ${t.name} template`}
+                  title="Preview template"
+                >
+                  <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M8 3C4.5 3 1.5 5.5 0 8c1.5 2.5 4.5 5 8 5s6.5-2.5 8-5c-1.5-2.5-4.5-5-8-5zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0-5a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+                  </svg>
+                </button>
+              </div>
+              <span className="text-[10px] text-muted-foreground text-center leading-tight line-clamp-2">
+                {t.name}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Template preview modal */}
+      <Dialog open={previewTemplate !== null} onOpenChange={(open) => { if (!open) setPreviewTemplate(null) }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{previewTemplate?.name ?? ''}</DialogTitle>
+            <DialogDescription>{previewTemplate?.description ?? ''}</DialogDescription>
+          </DialogHeader>
+          {previewTemplate && (
+            <div className="mt-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewTemplate.thumbnail_url}
+                alt={previewTemplate.name}
+                className="w-full rounded-lg border border-border object-contain"
+              />
+            </div>
+          )}
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              type="button"
+              className="btn btn-ghost text-sm"
+              onClick={() => setPreviewTemplate(null)}
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary text-sm"
+              onClick={() => {
+                if (previewTemplate) {
+                  onSelect(previewTemplate.id)
+                  setPreviewTemplate(null)
+                }
+              }}
+            >
+              Use this template
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 

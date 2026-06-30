@@ -5,9 +5,11 @@ from collections.abc import Callable
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_session
+from app.db.models.match import Match as MatchModel
 from app.db.models.user import User
 from app.deps import (
     get_current_user,
@@ -19,6 +21,7 @@ from app.llm.client import LLMClient
 from app.repositories.job import JobRepository
 from app.repositories.scrape_run import ScrapeRunRepository
 from app.schemas.job import (
+    JobDetailRead,
     JobPostingPage,
     JobPostingRead,
     ScrapeRequest,
@@ -93,19 +96,36 @@ async def list_curated_companies(
     return company_names()
 
 
-@router.get("/{job_id}", response_model=JobPostingRead)
+@router.get("/{job_id}", response_model=JobDetailRead)
 async def get_job(
     job_id: uuid.UUID,
-    repo: JobRepository = Depends(_get_repo),  # noqa: B008
-) -> JobPostingRead:
-    """Retrieve a single job posting by ID. Returns 404 if not found."""
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
+) -> JobDetailRead:
+    """Retrieve a single job posting (with full description) by ID.
+
+    Embeds the user's latest STORED match read-only — it never recomputes, so the
+    detail view loads instantly. Scoring happens via POST /api/match/run or the
+    on-demand GET /api/jobs/{id}/match endpoint. Returns 404 if not found.
+    """
+    repo = JobRepository(session)
     posting = await repo.get(job_id)
     if posting is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Job posting not found",
         )
-    return posting  # type: ignore[return-value]
+    result = await session.execute(
+        select(MatchModel)
+        .where(MatchModel.user_id == current_user.id, MatchModel.job_id == job_id)
+        .order_by(MatchModel.computed_at.desc().nulls_last())
+        .limit(1)
+    )
+    match = result.scalar_one_or_none()
+    read = JobDetailRead.model_validate(posting)
+    return read.model_copy(
+        update={"match": MatchRead.model_validate(match) if match is not None else None}
+    )
 
 
 @router.post("/scrape", response_model=ScrapeResponse)

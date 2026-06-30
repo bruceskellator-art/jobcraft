@@ -43,6 +43,16 @@ class JobPostingRead(BaseModel):
     match: MatchRead | None = None
 
 
+class JobDetailRead(JobPostingRead):
+    """Job posting for the detail view — adds the full description (raw_content).
+
+    Kept separate from JobPostingRead so the list endpoint doesn't ship the full
+    (often large, HTML) description for every row.
+    """
+
+    raw_content: str
+
+
 class ScrapeRequest(BaseModel):
     """Request body for scrape endpoints.
 

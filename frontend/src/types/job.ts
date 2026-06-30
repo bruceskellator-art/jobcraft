@@ -26,6 +26,8 @@ export interface JobPosting {
   scraped_at: string
   extracted: ExtractedJobView | null
   match: MatchRead | null
+  /** Full job description (HTML/text). Only present on the detail endpoint. */
+  raw_content?: string
 }
 
 export type JobSource = 'greenhouse' | 'lever' | 'all'

@@ -269,6 +269,19 @@ export async function getApplyQueue(signal?: AbortSignal): Promise<ApplyQueueIte
   return handleResponse<ApplyQueueItem[]>(res)
 }
 
+/**
+ * Queue one or more jobs for auto-apply. Creates (or returns existing)
+ * Application rows in the apply pipeline — deduped by (user, job).
+ */
+export async function queueApply(jobIds: string[]): Promise<Application[]> {
+  const res = await fetch(`${BASE}/api/apply/queue`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job_ids: jobIds }),
+  })
+  return handleResponse<Application[]>(res)
+}
+
 export async function listApplications(
   status?: string,
   signal?: AbortSignal,
