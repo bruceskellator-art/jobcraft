@@ -11,21 +11,12 @@ import { MatchBreakdown } from '@/components/jobs/MatchBreakdown'
 import { GenerationPanel } from '@/components/jobs/GenerationPanel'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
 import { CompanyLogo } from '@/components/common/CompanyLogo'
+import { sourceLabel } from '@/lib/sources'
 
 type PageState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'success'; job: JobPosting; match: MatchRead | null }
-
-function sourceLabel(source: string): string {
-  const MAP: Record<string, string> = {
-    greenhouse: 'GH',
-    lever: 'LV',
-    linkedin: 'LI',
-    mcf: 'MCF',
-  }
-  return MAP[source.toLowerCase()] ?? source.slice(0, 3).toUpperCase()
-}
 
 function formatSalary(min?: number, max?: number): string | null {
   if (!min && !max) return null

@@ -34,6 +34,7 @@ export function DimensionBar({ label, score }: DimensionBarProps) {
       </div>
       <div className="h-1.5 rounded-full bg-muted">
         <div
+          data-bar
           className={`h-full rounded-full ${barColorClass(score)}`}
           style={{ width: `${pct}%` }}
         />

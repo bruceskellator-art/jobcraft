@@ -3,18 +3,9 @@ import type { JobPosting } from '@/types/job'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
 import { relativeTime } from '@/lib/relativeTime'
 import { CompanyLogo } from '@/components/common/CompanyLogo'
+import { sourceLabel } from '@/lib/sources'
 
 const MAX_SKILLS = 4
-
-function sourceLabel(source: string): string {
-  const MAP: Record<string, string> = {
-    greenhouse: 'GH',
-    lever: 'LV',
-    linkedin: 'LI',
-    mcf: 'MCF',
-  }
-  return MAP[source.toLowerCase()] ?? source.slice(0, 3).toUpperCase()
-}
 
 function fitChipClass(score: number): string {
   if (score >= 0.75) return 'chip-high'
@@ -101,14 +92,19 @@ export function JobRow({ job }: JobRowProps) {
       {/* Age */}
       <td className="px-4 py-3 text-xs text-muted-foreground num">{age}</td>
 
+      {/* Source */}
+      <td className="px-4 py-3">
+        <span className="source-pill whitespace-nowrap">{sourceLabel(job.source)}</span>
+      </td>
+
       {/* Action */}
-      <td className="px-4 py-3 text-right">
-        <div className="flex items-center justify-end gap-1.5">
-          <span className="source-pill">{sourceLabel(job.source)}</span>
-          <Link href={`/jobs/${job.id}`} className="btn btn-ghost text-xs">
-            View →
-          </Link>
-        </div>
+      <td className="px-4 py-3 pl-6 text-right">
+        <Link
+          href={`/jobs/${job.id}`}
+          className="btn btn-ghost text-xs inline-flex items-center gap-1 whitespace-nowrap"
+        >
+          View <span aria-hidden>→</span>
+        </Link>
       </td>
     </tr>
   )

@@ -1,7 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 import { toast } from 'sonner'
+import { entrance } from '@/lib/motion'
 import type { Artifact, StyleConfig, ResumeTemplate } from '@/types/artifact'
 import {
   generateArtifact,
@@ -300,8 +303,24 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
 
   const isGenerating = isGeneratingResume || isGeneratingCover
 
+  const panelRef = useRef<HTMLDivElement>(null)
+  // Gentle entrance for freshly generated document panels as they appear.
+  useGSAP(
+    () => {
+      if (!panelRef.current) return
+      const targets = gsap.utils.toArray<HTMLElement>('[data-animate]', panelRef.current)
+      if (targets.length === 0) return
+      entrance(targets, { stagger: 0.06 })
+    },
+    {
+      scope: panelRef,
+      dependencies: [latestResume?.id, latestCover?.id],
+      revertOnUpdate: true,
+    },
+  )
+
   return (
-    <div className="space-y-5">
+    <div ref={panelRef} className="space-y-5">
       {/* Generation controls */}
       <section className="bg-card border border-border rounded-xl">
         <div className="px-4 py-3 border-b border-border">
@@ -378,7 +397,7 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
 
       {/* Latest resume preview */}
       {latestResume && (
-        <section className="bg-card border border-border rounded-xl">
+        <section data-animate className="bg-card border border-border rounded-xl">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">Tailored résumé</h2>
@@ -422,7 +441,7 @@ export function GenerationPanel({ jobId }: GenerationPanelProps) {
 
       {/* Latest cover letter preview */}
       {latestCover && (
-        <section className="bg-card border border-border rounded-xl">
+        <section data-animate className="bg-card border border-border rounded-xl">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <div>
               <h2 className="text-sm font-semibold">Cover letter</h2>

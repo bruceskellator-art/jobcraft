@@ -1,4 +1,10 @@
+'use client'
+
+import { useRef } from 'react'
+import gsap from 'gsap'
+import { useGSAP } from '@gsap/react'
 import type { MatchRead, GapSeverity } from '@/types/match'
+import { animateBar } from '@/lib/motion'
 import { DimensionBar } from './DimensionBar'
 
 interface MatchBreakdownProps {
@@ -23,10 +29,23 @@ function overallChipClass(score: number): string {
 }
 
 export function MatchBreakdown({ match }: MatchBreakdownProps) {
+  const containerRef = useRef<HTMLElement>(null)
   const dimensions = Object.entries(match.dimension_scores)
 
+  // Grow each dimension bar from 0 to its score on mount / when the match changes.
+  useGSAP(
+    () => {
+      if (!containerRef.current) return
+      animateBar(
+        gsap.utils.toArray<HTMLElement>('[data-bar]', containerRef.current),
+        { stagger: 0.05 },
+      )
+    },
+    { scope: containerRef, dependencies: [match.overall_score], revertOnUpdate: true },
+  )
+
   return (
-    <section className="bg-card border border-border rounded-xl">
+    <section ref={containerRef} className="bg-card border border-border rounded-xl">
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-sm font-semibold">Match breakdown</h2>
         <span className={overallChipClass(match.overall_score)}>
