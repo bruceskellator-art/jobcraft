@@ -17,6 +17,8 @@ import { ExperienceForm } from '@/components/experience/ExperienceForm'
 
 const KIND_ORDER: ExperienceKind[] = ['work', 'project', 'education', 'skill', 'achievement']
 const GRID_KINDS = new Set<ExperienceKind>(['skill', 'project'])
+// Only projects are user-reorderable; work/education order is derived from dates.
+const REORDERABLE_KINDS = new Set<ExperienceKind>(['project'])
 
 type ItemsByKind = Partial<Record<ExperienceKind, ExperienceItem[]>>
 
@@ -206,7 +208,11 @@ export function ExperienceView() {
                 items={grouped[kind] ?? []}
                 onEdit={handleEditClick}
                 onDelete={handleDeleteClick}
-                onReorder={newItems => handleReorder(kind, newItems)}
+                onReorder={
+                  REORDERABLE_KINDS.has(kind)
+                    ? newItems => handleReorder(kind, newItems)
+                    : undefined
+                }
               />
             ))}
 
@@ -219,7 +225,11 @@ export function ExperienceView() {
                     items={grouped[kind] ?? []}
                     onEdit={handleEditClick}
                     onDelete={handleDeleteClick}
-                    onReorder={newItems => handleReorder(kind, newItems)}
+                    onReorder={
+                      REORDERABLE_KINDS.has(kind)
+                        ? newItems => handleReorder(kind, newItems)
+                        : undefined
+                    }
                   />
                 ))}
               </div>
