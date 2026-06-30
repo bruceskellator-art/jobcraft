@@ -95,13 +95,31 @@ export function ScrapeProfileForm({
         </p>
       </div>
 
+      <div className="space-y-1.5">
+        <label
+          htmlFor="scrape-location"
+          className="block text-xs font-medium text-muted-foreground"
+        >
+          Location <span className="font-normal">(optional)</span>
+        </label>
+        <Input
+          id="scrape-location"
+          value={config.location}
+          onChange={e => update('location', e.target.value)}
+          placeholder="Singapore"
+        />
+        <p className="text-xs text-muted-foreground">
+          Filter results by city or country.
+        </p>
+      </div>
+
       <div className="flex flex-wrap items-end gap-6">
         <div className="space-y-1.5">
           <label
             htmlFor="scrape-lookback"
             className="block text-xs font-medium text-muted-foreground"
           >
-            Lookback days
+            Recency (days)
           </label>
           <Input
             id="scrape-lookback"

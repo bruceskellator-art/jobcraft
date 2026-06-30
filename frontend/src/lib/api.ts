@@ -86,6 +86,7 @@ export interface ListJobsParams {
   source?: string
   q?: string
   company?: string
+  location?: string
   scored?: boolean
   min_fit?: number
   max_fit?: number
@@ -110,6 +111,7 @@ export async function listJobs(
   if (params?.source && params.source !== 'all') url.searchParams.set('source', params.source)
   if (params?.q) url.searchParams.set('q', params.q)
   if (params?.company) url.searchParams.set('company', params.company)
+  if (params?.location) url.searchParams.set('location', params.location)
   if (params?.scored !== undefined) url.searchParams.set('scored', String(params.scored))
   if (params?.min_fit !== undefined) url.searchParams.set('min_fit', String(params.min_fit))
   if (params?.max_fit !== undefined) url.searchParams.set('max_fit', String(params.max_fit))
@@ -552,7 +554,10 @@ export async function runScrape(profile: ScrapeProfileConfig): Promise<ScrapeRes
     body: JSON.stringify({
       query: profile.query,
       companies: profile.companies,
-      filters: { posted_within_days: profile.posted_within_days },
+      filters: {
+        posted_within_days: profile.posted_within_days,
+        locations: profile.location ? [profile.location] : [],
+      },
       extract: profile.extract,
     }),
   })
@@ -566,7 +571,10 @@ export async function enqueueScrape(profile: ScrapeProfileConfig): Promise<Scrap
     body: JSON.stringify({
       query: profile.query,
       companies: profile.companies,
-      filters: { posted_within_days: profile.posted_within_days },
+      filters: {
+        posted_within_days: profile.posted_within_days,
+        locations: profile.location ? [profile.location] : [],
+      },
       extract: profile.extract,
     }),
   })

@@ -1,6 +1,7 @@
 export interface ScrapeProfileConfig {
   query: string
   companies: string[]
+  location: string
   posted_within_days: number
   extract: boolean
 }

@@ -4,7 +4,8 @@ import { useState, useEffect, useReducer, useCallback, useRef } from 'react'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { toast } from 'sonner'
-import { entrance } from '@/lib/motion'
+import { ScanSearchIcon } from 'lucide-react'
+import { entrance, MOTION } from '@/lib/motion'
 import { Toaster } from '@/components/ui/sonner'
 import {
   Tooltip,
@@ -12,14 +13,33 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetBody,
+} from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
 import type { JobPosting } from '@/types/job'
-import { listJobs, runMatches, type ListJobsParams } from '@/lib/api'
+import type { ScrapeProfileConfig } from '@/types/settings'
+import {
+  listJobs,
+  runMatches,
+  getScrapeProfile,
+  putScrapeProfile,
+  enqueueScrape,
+  type ListJobsParams,
+} from '@/lib/api'
 import { JobRow } from '@/components/jobs/JobRow'
 import {
   JobsToolbar,
   type ScoredFilter,
   type SortOption,
+  type RecencyOption,
 } from '@/components/jobs/JobsToolbar'
+import { ScrapeProfileForm } from '@/components/settings/ScrapeProfileForm'
 
 const DEBOUNCE_MS = 300
 const PAGE_SIZE = 50
@@ -52,12 +72,19 @@ interface JobFilters {
   scored: ScoredFilter
   sort: SortOption
   minFit: string
+  location: string
+  recency: RecencyOption
 }
 
 function scoredToParam(scored: ScoredFilter): boolean | undefined {
   if (scored === 'scored') return true
   if (scored === 'unscored') return false
   return undefined
+}
+
+function recencyToDays(recency: RecencyOption): number | undefined {
+  if (recency === 'any') return undefined
+  return Number(recency)
 }
 
 export default function JobsPage() {
@@ -69,13 +96,34 @@ export default function JobsPage() {
   const [scored, setScored] = useState<ScoredFilter>('all')
   const [sort, setSort] = useState<SortOption>('recent')
   const [minFit, setMinFit] = useState('any')
+  const [locationInput, setLocationInput] = useState('')
+  const [debouncedLocation, setDebouncedLocation] = useState('')
+  const [recency, setRecency] = useState<RecencyOption>('any')
   const [offset, setOffset] = useState(0)
   // Bumped to force the main fetch effect to re-run (e.g. after scoring new
   // jobs), so all fetching stays in one place with one abort-managed controller.
   const [refetchNonce, setRefetchNonce] = useState(0)
 
+  // Sheet / scrape panel state
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [scrapeProfile, setScrapeProfile] = useState<ScrapeProfileConfig | null>(null)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [isEnqueueing, setIsEnqueueing] = useState(false)
+  const [isScraping, setIsScraping] = useState(false)
+
   const [isRunningMatches, setIsRunningMatches] = useState(false)
   const runMatchesAbortRef = useRef<AbortController | null>(null)
+
+  // Load scrape profile once on mount so the Sheet form is pre-populated.
+  useEffect(() => {
+    const controller = new AbortController()
+    getScrapeProfile(controller.signal)
+      .then(setScrapeProfile)
+      .catch(() => {
+        // Non-critical — the form still renders with empty defaults if this fails.
+      })
+    return () => controller.abort()
+  }, [])
 
   // Debounce the search input, resetting to the first page when it settles.
   useEffect(() => {
@@ -85,6 +133,15 @@ export default function JobsPage() {
     }, DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [searchInput])
+
+  // Debounce the location input, resetting pagination on settle.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedLocation(locationInput)
+      setOffset(0)
+    }, DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [locationInput])
 
   // Filter setters that also reset pagination to the first page in the SAME
   // render, so changing a filter triggers exactly one fetch with offset 0
@@ -105,6 +162,10 @@ export default function JobsPage() {
     setMinFit(value)
     setOffset(0)
   }, [])
+  const handleRecencyChange = useCallback((value: RecencyOption) => {
+    setRecency(value)
+    setOffset(0)
+  }, [])
 
   const fetchJobs = useCallback(
     (filters: JobFilters, pageOffset: number, signal: AbortSignal) => {
@@ -118,6 +179,10 @@ export default function JobsPage() {
           ? { scored: scoredToParam(filters.scored) }
           : {}),
         ...(filters.minFit !== 'any' ? { min_fit: Number(filters.minFit) } : {}),
+        ...(filters.location.trim() ? { location: filters.location.trim() } : {}),
+        ...(recencyToDays(filters.recency) !== undefined
+          ? { posted_within_days: recencyToDays(filters.recency) }
+          : {}),
       }
 
       listJobs(params, signal)
@@ -144,6 +209,8 @@ export default function JobsPage() {
     scored,
     sort,
     minFit,
+    location: debouncedLocation,
+    recency,
   }
 
   // Fetch when filters or page change.
@@ -154,10 +221,9 @@ export default function JobsPage() {
     return () => controller.abort()
     // currentFilters is derived from the primitive deps listed below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch, source, scored, sort, minFit, offset, refetchNonce, fetchJobs])
+  }, [debouncedSearch, source, scored, sort, minFit, debouncedLocation, recency, offset, refetchNonce, fetchJobs])
 
   function handleRetry() {
-    // Re-run the main fetch effect; its controller handles abort on cleanup.
     setRefetchNonce(n => n + 1)
   }
 
@@ -177,9 +243,6 @@ export default function JobsPage() {
           `Scored ${result.matched} new job${result.matched !== 1 ? 's' : ''}${failedSuffix}`,
         )
       }
-      // Refetch to surface updated match scores. Routed through the main fetch
-      // effect (via the nonce) so the request is abort-managed and we never
-      // setState after unmount.
       setRefetchNonce(n => n + 1)
     } catch (err: unknown) {
       if (err instanceof Error && err.name === 'AbortError') return
@@ -189,24 +252,57 @@ export default function JobsPage() {
     }
   }
 
+  async function handleSaveProfile(config: ScrapeProfileConfig) {
+    if (isSavingProfile) return
+    setIsSavingProfile(true)
+    try {
+      const updated = await putScrapeProfile(config)
+      setScrapeProfile(updated)
+      toast.success('Scrape profile saved.')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save scrape profile.')
+      throw err
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
+
+  async function handleRunScrape(config: ScrapeProfileConfig) {
+    if (isEnqueueing) return
+    setIsEnqueueing(true)
+    try {
+      await enqueueScrape(config)
+      toast.success('Scrape queued — track it on Activity')
+      setSheetOpen(false)
+      // Surface a subtle hint that scraping is underway, then refresh after a
+      // short delay to surface any fast results.
+      setIsScraping(true)
+      setTimeout(() => {
+        setIsScraping(false)
+        setRefetchNonce(n => n + 1)
+      }, 4000)
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Scrape failed.')
+      throw err
+    } finally {
+      setIsEnqueueing(false)
+    }
+  }
+
   const isLoading = fetchState.status === 'loading' || fetchState.status === 'idle'
   const loadError = fetchState.status === 'error' ? fetchState.message : null
   const jobs = fetchState.status === 'success' ? fetchState.jobs : []
   const total = fetchState.status === 'success' ? fetchState.total : 0
 
   const tableRef = useRef<HTMLDivElement>(null)
-  // Subtle staggered fade-in of the real rows once results land. Keyed on the
-  // result set so it replays per page / filter change. Opacity + tiny slide
-  // only — no height changes, so it doesn't introduce layout shift.
+  // Snappy staggered fade-in keyed on result set — replays on every filter/page change.
   const rowsSignature = jobs.map(j => j.id).join(',')
   useGSAP(
     () => {
       if (!tableRef.current) return
-      // JobRow renders each row as `<tr class="data-row">`, so this matches the
-      // real rows; scoped to tableRef so it never reaches other tables.
       const rows = gsap.utils.toArray<HTMLElement>('tbody tr.data-row', tableRef.current)
       if (rows.length === 0) return
-      entrance(rows, { stagger: 0.03, y: 6 })
+      entrance(rows, { stagger: MOTION.staggerTight, y: 6, duration: 0.3 })
     },
     { scope: tableRef, dependencies: [rowsSignature], revertOnUpdate: true },
   )
@@ -216,9 +312,40 @@ export default function JobsPage() {
   const hasPrev = offset > 0
   const hasNext = offset + PAGE_SIZE < total
 
+  // Default profile to show in the sheet when the API hasn't returned yet.
+  const profileForSheet: ScrapeProfileConfig = scrapeProfile ?? {
+    query: '',
+    companies: [],
+    location: '',
+    posted_within_days: 7,
+    extract: false,
+  }
+
   return (
     <>
       <Toaster />
+
+      {/* Scrape-jobs Sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="right">
+          <SheetHeader>
+            <SheetTitle>Scrape jobs</SheetTitle>
+            <SheetDescription>
+              Tweak your profile and run a scrape. Results appear on the Activity page.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetBody>
+            <ScrapeProfileForm
+              initial={profileForSheet}
+              onSave={handleSaveProfile}
+              onRun={handleRunScrape}
+              isSaving={isSavingProfile}
+              isRunning={isEnqueueing}
+            />
+          </SheetBody>
+        </SheetContent>
+      </Sheet>
+
       <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
         <div>
           <h1 className="text-sm font-semibold">Jobs</h1>
@@ -227,25 +354,39 @@ export default function JobsPage() {
               ? 'Loading…'
               : loadError
                 ? 'Error loading jobs'
-                : `${total} job${total !== 1 ? 's' : ''}`}
+                : isScraping
+                  ? `${total} job${total !== 1 ? 's' : ''} · scraping…`
+                  : `${total} job${total !== 1 ? 's' : ''}`}
           </p>
         </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  className="btn btn-ghost cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={() => void handleScoreNewJobs()}
-                  disabled={isRunningMatches}
-                >
-                  {isRunningMatches ? 'Scoring…' : 'Score new jobs'}
-                </button>
-              }
-            />
-            <TooltipContent>Score jobs that haven&apos;t been matched yet</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            className="cursor-pointer gap-1.5"
+            onClick={() => setSheetOpen(true)}
+          >
+            <ScanSearchIcon size={14} />
+            Scrape jobs
+          </Button>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    className="btn btn-ghost cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={() => void handleScoreNewJobs()}
+                    disabled={isRunningMatches}
+                  >
+                    {isRunningMatches ? 'Scoring…' : 'Score new jobs'}
+                  </button>
+                }
+              />
+              <TooltipContent>Score jobs that haven&apos;t been matched yet</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </header>
 
       <JobsToolbar
@@ -259,6 +400,10 @@ export default function JobsPage() {
         onSortChange={handleSortChange}
         minFit={minFit}
         onMinFitChange={handleMinFitChange}
+        locationInput={locationInput}
+        onLocationInputChange={setLocationInput}
+        recency={recency}
+        onRecencyChange={handleRecencyChange}
       />
 
       <div className="p-6">
@@ -277,9 +422,7 @@ export default function JobsPage() {
         )}
 
         {!isLoading && !loadError && jobs.length === 0 && (
-          <div className="empty py-16">
-            No jobs found. Try adjusting your search or filters.
-          </div>
+          <EmptyState onOpenSheet={() => setSheetOpen(true)} />
         )}
 
         {!isLoading && !loadError && jobs.length > 0 && (
@@ -320,6 +463,35 @@ export default function JobsPage() {
         )}
       </div>
     </>
+  )
+}
+
+interface EmptyStateProps {
+  onOpenSheet: () => void
+}
+
+function EmptyState({ onOpenSheet }: EmptyStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+      <div className="rounded-full bg-muted p-4">
+        <ScanSearchIcon size={28} className="text-muted-foreground" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-medium">No jobs yet</p>
+        <p className="text-xs text-muted-foreground max-w-xs">
+          Scrape your first batch to start discovering roles that match your profile.
+        </p>
+      </div>
+      <Button
+        variant="default"
+        size="sm"
+        className="cursor-pointer gap-1.5 mt-1"
+        onClick={onOpenSheet}
+      >
+        <ScanSearchIcon size={14} />
+        Scrape your first batch
+      </Button>
+    </div>
   )
 }
 

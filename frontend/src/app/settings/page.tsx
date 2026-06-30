@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useEntrance } from '@/hooks/useEntrance'
+import { MOTION } from '@/lib/motion'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import type { AutopilotConfig, AnswerBankItem, ProfileField } from '@/types/apply'
@@ -31,6 +33,12 @@ const SOURCES = [
 ]
 
 export default function SettingsPage() {
+  const sectionsRef = useEntrance<HTMLDivElement>({
+    selector: '[data-animate]',
+    stagger: MOTION.stagger,
+    y: 10,
+  })
+
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [autopilot, setAutopilot] = useState<AutopilotConfig | null>(null)
@@ -168,9 +176,9 @@ export default function SettingsPage() {
         )}
 
         {!isLoading && !loadError && (
-          <>
+          <div ref={sectionsRef} className="space-y-5">
             {/* Scrape Profile */}
-            <section className="bg-card border border-border rounded-xl p-4">
+            <section data-animate className="bg-card border border-border rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">Scrape profile</h2>
               {scrapeProfile && (
                 <ScrapeProfileForm
@@ -184,7 +192,7 @@ export default function SettingsPage() {
             </section>
 
             {/* Sources & Autopilot */}
-            <section className="bg-card border border-border rounded-xl p-4 space-y-4">
+            <section data-animate className="bg-card border border-border rounded-xl p-4 space-y-4">
               <h2 className="text-sm font-semibold">Sources &amp; Autopilot</h2>
 
               <table className="w-full text-sm">
@@ -222,7 +230,7 @@ export default function SettingsPage() {
             </section>
 
             {/* Answer Bank */}
-            <section className="bg-card border border-border rounded-xl p-4">
+            <section data-animate className="bg-card border border-border rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">Answer Bank</h2>
               <AnswerBank
                 answers={answers}
@@ -232,7 +240,7 @@ export default function SettingsPage() {
             </section>
 
             {/* Profile Fields */}
-            <section className="bg-card border border-border rounded-xl p-4">
+            <section data-animate className="bg-card border border-border rounded-xl p-4">
               <h2 className="text-sm font-semibold mb-3">Profile Fields</h2>
               <ProfileFields
                 fields={profileFields}
@@ -242,8 +250,10 @@ export default function SettingsPage() {
             </section>
 
             {/* Email Sync */}
-            <EmailSync />
-          </>
+            <div data-animate>
+              <EmailSync />
+            </div>
+          </div>
         )}
       </div>
     </>

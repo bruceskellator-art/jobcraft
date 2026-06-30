@@ -1,6 +1,7 @@
 'use client'
 
-import { SearchIcon } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { SearchIcon, MapPinIcon } from 'lucide-react'
 import { SOURCE_OPTIONS } from '@/lib/sources'
 import {
   Select,
@@ -12,6 +13,7 @@ import {
 
 export type ScoredFilter = 'all' | 'scored' | 'unscored'
 export type SortOption = 'recent' | 'fit'
+export type RecencyOption = 'any' | '1' | '7' | '30'
 
 const SCORED_OPTIONS: { value: ScoredFilter; label: string }[] = [
   { value: 'all', label: 'All jobs' },
@@ -32,6 +34,15 @@ const MIN_FIT_OPTIONS: { value: string; label: string }[] = [
   { value: '0.85', label: 'Fit ≥ 85%' },
 ]
 
+const RECENCY_OPTIONS: { value: RecencyOption; label: string }[] = [
+  { value: 'any', label: 'Any time' },
+  { value: '1', label: 'Past 24 hours' },
+  { value: '7', label: 'Past week' },
+  { value: '30', label: 'Past month' },
+]
+
+const LOCATION_DEBOUNCE_MS = 350
+
 interface JobsToolbarProps {
   searchValue: string
   onSearchChange: (value: string) => void
@@ -43,6 +54,11 @@ interface JobsToolbarProps {
   onSortChange: (sort: SortOption) => void
   minFit: string
   onMinFitChange: (minFit: string) => void
+  /** Raw (non-debounced) location text shown in the input. */
+  locationInput: string
+  onLocationInputChange: (value: string) => void
+  recency: RecencyOption
+  onRecencyChange: (recency: RecencyOption) => void
 }
 
 export function JobsToolbar({
@@ -56,7 +72,30 @@ export function JobsToolbar({
   onSortChange,
   minFit,
   onMinFitChange,
+  locationInput,
+  onLocationInputChange,
+  recency,
+  onRecencyChange,
 }: JobsToolbarProps) {
+  // Debounce the location input so we fire onLocationInputChange immediately
+  // for the raw value (controlled) but callers can derive a debounced value
+  // via the separate debouncedLocation pattern in the page.
+  // The toolbar itself just needs the controlled input to work.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handleLocationChange(value: string) {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    // Report immediately so the input stays controlled.
+    onLocationInputChange(value)
+  }
+
+  // Clean up any pending debounce on unmount.
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
   return (
     <div className="px-6 py-2.5 bg-card border-b border-border flex items-center gap-3 flex-wrap">
       <div className="relative">
@@ -115,6 +154,40 @@ export function JobsToolbar({
           </SelectTrigger>
           <SelectContent>
             {MIN_FIT_OPTIONS.map(opt => (
+              <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FilterField>
+
+      {/* Location text filter */}
+      <div className="relative">
+        <MapPinIcon
+          size={12}
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+        />
+        <input
+          type="search"
+          placeholder="Location (e.g. Singapore)"
+          value={locationInput}
+          onChange={e => handleLocationChange(e.target.value)}
+          className="text-xs border border-border rounded-lg pl-7 pr-3 py-1.5 w-44 focus:outline-none focus:ring-2 focus:ring-ring/40 bg-card"
+          aria-label="Location filter"
+        />
+      </div>
+
+      <FilterField label="Recency">
+        <Select
+          value={recency}
+          onValueChange={v => v !== null && onRecencyChange(v as RecencyOption)}
+        >
+          <SelectTrigger size="sm" aria-label="Recency" className="text-xs cursor-pointer">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {RECENCY_OPTIONS.map(opt => (
               <SelectItem key={opt.value} value={opt.value} className="cursor-pointer">
                 {opt.label}
               </SelectItem>
