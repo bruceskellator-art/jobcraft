@@ -103,10 +103,10 @@ export default function ApplicationsPage() {
       listApplications(undefined, signal),
       listJobs(undefined, signal),
     ])
-      .then(([apps, jobs]) => {
+      .then(([apps, jobsPage]) => {
         if (signal.aborted) return
         const jobsById = new Map<string, JobPosting>()
-        for (const job of jobs) {
+        for (const job of jobsPage.items) {
           jobsById.set(job.id, job)
         }
         dispatch({

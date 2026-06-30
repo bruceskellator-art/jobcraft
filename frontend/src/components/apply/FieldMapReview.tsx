@@ -2,16 +2,7 @@ import type { ApplyQueueItem, MappedField } from '@/types/apply'
 import { scoreColor } from '@/lib/scoreColor'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
 import { CompanyLogo } from '@/components/common/CompanyLogo'
-
-function sourceLabel(source: string): string {
-  const MAP: Record<string, string> = {
-    greenhouse: 'GH',
-    lever: 'LV',
-    linkedin: 'LI',
-    mcf: 'MCF',
-  }
-  return MAP[source.toLowerCase()] ?? source.slice(0, 3).toUpperCase()
-}
+import { sourceLabel } from '@/lib/sources'
 
 function hasUnresolvedKnockouts(fields: MappedField[]): boolean {
   return fields.some(f => f.field.is_knockout && f.value === null)

@@ -1,8 +1,6 @@
 export interface ScrapeProfileConfig {
-  linkedin_keywords: string[]
-  mcf_keywords: string[]
-  greenhouse_boards: string[]
-  lever_companies: string[]
+  query: string
+  companies: string[]
   posted_within_days: number
   extract: boolean
 }

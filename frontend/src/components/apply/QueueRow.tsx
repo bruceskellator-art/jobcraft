@@ -3,18 +3,9 @@ import { scoreColor } from '@/lib/scoreColor'
 import { getSkillVariant } from '@/components/experience/skillTagHelper'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CompanyLogo } from '@/components/common/CompanyLogo'
+import { sourceLabel } from '@/lib/sources'
 
 const MAX_SKILLS = 3
-
-function sourceLabel(source: string): string {
-  const MAP: Record<string, string> = {
-    greenhouse: 'GH',
-    lever: 'LV',
-    linkedin: 'LI',
-    mcf: 'MCF',
-  }
-  return MAP[source.toLowerCase()] ?? source.slice(0, 3).toUpperCase()
-}
 
 const DOT_COLORS: Record<ApplicationStatus, string> = {
   queued:    '#a1a1aa',

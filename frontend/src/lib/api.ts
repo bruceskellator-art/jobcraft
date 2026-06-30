@@ -85,17 +85,46 @@ import type { JobPosting } from '@/types/job'
 export interface ListJobsParams {
   source?: string
   q?: string
+  company?: string
+  scored?: boolean
+  min_fit?: number
+  max_fit?: number
+  posted_within_days?: number
+  sort?: 'recent' | 'fit'
+  limit?: number
+  offset?: number
+}
+
+export interface JobPage {
+  items: JobPosting[]
+  total: number
+  limit: number
+  offset: number
 }
 
 export async function listJobs(
   params?: ListJobsParams,
   signal?: AbortSignal,
-): Promise<JobPosting[]> {
+): Promise<JobPage> {
   const url = new URL(`${BASE}/api/jobs`)
-  if (params?.source) url.searchParams.set('source', params.source)
+  if (params?.source && params.source !== 'all') url.searchParams.set('source', params.source)
   if (params?.q) url.searchParams.set('q', params.q)
+  if (params?.company) url.searchParams.set('company', params.company)
+  if (params?.scored !== undefined) url.searchParams.set('scored', String(params.scored))
+  if (params?.min_fit !== undefined) url.searchParams.set('min_fit', String(params.min_fit))
+  if (params?.max_fit !== undefined) url.searchParams.set('max_fit', String(params.max_fit))
+  if (params?.posted_within_days !== undefined)
+    url.searchParams.set('posted_within_days', String(params.posted_within_days))
+  if (params?.sort) url.searchParams.set('sort', params.sort)
+  if (params?.limit !== undefined) url.searchParams.set('limit', String(params.limit))
+  if (params?.offset !== undefined) url.searchParams.set('offset', String(params.offset))
   const res = await fetch(url.toString(), { signal })
-  return handleResponse<JobPosting[]>(res)
+  return handleResponse<JobPage>(res)
+}
+
+export async function listCuratedCompanies(signal?: AbortSignal): Promise<string[]> {
+  const res = await fetch(`${BASE}/api/jobs/scrape/companies`, { signal })
+  return handleResponse<string[]>(res)
 }
 
 export async function getJob(id: string, signal?: AbortSignal): Promise<JobPosting> {
@@ -112,13 +141,23 @@ export async function getJobMatch(id: string, signal?: AbortSignal): Promise<Mat
 
 export interface RunMatchesResult {
   matched: number
+  failed: number
+  total: number
 }
 
-export async function runMatches(limit?: number, signal?: AbortSignal): Promise<RunMatchesResult> {
+export interface RunMatchesParams {
+  only_unscored?: boolean
+  limit?: number
+}
+
+export async function runMatches(
+  params?: RunMatchesParams,
+  signal?: AbortSignal,
+): Promise<RunMatchesResult> {
   const res = await fetch(`${BASE}/api/match/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...(limit !== undefined ? { limit } : {}) }),
+    body: JSON.stringify(params ?? {}),
     signal,
   })
   return handleResponse<RunMatchesResult>(res)
@@ -450,10 +489,8 @@ export interface ScrapeRunView {
   id: string
   status: ScrapeRunStatus
   request: {
-    greenhouse_boards?: string[]
-    lever_companies?: string[]
-    mcf_keywords?: string[]
-    linkedin_keywords?: string[]
+    query?: string
+    companies?: string[]
     extract?: boolean
     filters?: { posted_within_days?: number }
   } | null
@@ -513,10 +550,8 @@ export async function runScrape(profile: ScrapeProfileConfig): Promise<ScrapeRes
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      linkedin_keywords: profile.linkedin_keywords,
-      mcf_keywords: profile.mcf_keywords,
-      greenhouse_boards: profile.greenhouse_boards,
-      lever_companies: profile.lever_companies,
+      query: profile.query,
+      companies: profile.companies,
       filters: { posted_within_days: profile.posted_within_days },
       extract: profile.extract,
     }),
@@ -529,10 +564,8 @@ export async function enqueueScrape(profile: ScrapeProfileConfig): Promise<Scrap
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      linkedin_keywords: profile.linkedin_keywords,
-      mcf_keywords: profile.mcf_keywords,
-      greenhouse_boards: profile.greenhouse_boards,
-      lever_companies: profile.lever_companies,
+      query: profile.query,
+      companies: profile.companies,
       filters: { posted_within_days: profile.posted_within_days },
       extract: profile.extract,
     }),
