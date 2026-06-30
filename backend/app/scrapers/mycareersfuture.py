@@ -235,7 +235,10 @@ def _parse_posting(raw: dict) -> RawJobPosting:
     """Parse an MCF API job dict into RawJobPosting. Raises on missing required fields."""
     job_uuid: str = raw["uuid"]
     title: str = raw["title"]
-    company: str = (raw.get("company") or {}).get("name") or "Unknown"
+    # MCF nests the employer under hiringCompany (the actual employer) or
+    # postedCompany (often a recruiter/agency); there is no flat "company" key.
+    company_obj = raw.get("hiringCompany") or raw.get("postedCompany") or {}
+    company: str = company_obj.get("name") or "Unknown"
     source_url = f"{_JOB_URL_BASE}/{job_uuid}"
 
     # Location: MCF uses region/district, not a single string

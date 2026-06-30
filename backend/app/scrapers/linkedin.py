@@ -162,7 +162,7 @@ class LinkedInSource:
                 break
 
             page_yielded = 0
-            page_cutoff = False
+            page_date_filtered = 0
             for item_html in items:
                 try:
                     posting, posted_at = await self._parse_listing(item_html, filters)
@@ -170,18 +170,20 @@ class LinkedInSource:
                     logger.warning("LinkedIn: failed to parse listing: %s", exc)
                     continue
 
+                # LinkedIn's guest API does NOT guarantee newest-first ordering,
+                # so skip stale items rather than short-circuiting the whole page.
                 if posted_at is not None and posted_at < cutoff:
-                    logger.info(
-                        "LinkedIn page %d: reached date cutoff after %d items yielded",
-                        page, page_yielded,
-                    )
-                    return
+                    page_date_filtered += 1
+                    continue
 
                 if posting is not None:
                     page_yielded += 1
                     yield posting
 
-            logger.info("LinkedIn page %d done: yielded=%d of %d", page, page_yielded, len(items))
+            logger.info(
+                "LinkedIn page %d done: yielded=%d, date-filtered=%d of %d",
+                page, page_yielded, page_date_filtered, len(items),
+            )
 
         return
 
