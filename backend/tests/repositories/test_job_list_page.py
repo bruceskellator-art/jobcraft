@@ -32,7 +32,7 @@ async def _seed_prompt(session) -> PromptVersion:
     return pv
 
 
-def _make_job(source: str, company: str, title: str) -> JobPosting:
+def _make_job(source: str, company: str, title: str, location: str | None = None) -> JobPosting:
     return JobPosting(
         id=uuid.uuid4(),
         source=source,
@@ -40,6 +40,7 @@ def _make_job(source: str, company: str, title: str) -> JobPosting:
         source_id=str(uuid.uuid4()),
         company=company,
         title=title,
+        location=location,
         raw_content="content",
     )
 
@@ -119,3 +120,30 @@ async def test_list_page_scored_filter_and_fit_sort(session) -> None:
     # fit sort places the scored job first (nulls last)
     fit_rows, _ = await repo.list_page(user.id, sort="fit")
     assert fit_rows[0][0].id == scored_job.id
+
+
+async def test_list_page_location_filter(session) -> None:
+    user = await _seed_user(session)
+    sg_job = _make_job("linkedin", "Grab", "Data Engineer", location="Singapore")
+    remote_job = _make_job("linkedin", "Stripe", "Backend Engineer", location="Remote")
+    null_job = _make_job("greenhouse:acme", "Acme", "PM", location=None)
+    session.add(sg_job)
+    session.add(remote_job)
+    session.add(null_job)
+    await session.flush()
+    repo = JobRepository(session)
+
+    # Exact substring match — "Singapore" should match only sg_job
+    sg_rows, sg_total = await repo.list_page(user.id, location="Singapore")
+    assert sg_total == 1
+    assert sg_rows[0][0].id == sg_job.id
+
+    # Case-insensitive match — "remote" should match only remote_job
+    remote_rows, remote_total = await repo.list_page(user.id, location="remote")
+    assert remote_total == 1
+    assert remote_rows[0][0].id == remote_job.id
+
+    # No match — null location job is excluded
+    none_rows, none_total = await repo.list_page(user.id, location="Tokyo")
+    assert none_total == 0
+    assert none_rows == []

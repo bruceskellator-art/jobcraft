@@ -164,6 +164,7 @@ class JobRepository:
         source: str | None,
         query: str | None,
         company: str | None,
+        location: str | None,
         scored: bool | None,
         min_fit: float | None,
         max_fit: float | None,
@@ -183,6 +184,9 @@ class JobRepository:
         if company is not None:
             pattern = f"%{_escape_like(company)}%"
             stmt = stmt.where(JobPosting.company.ilike(pattern, escape=_LIKE_ESCAPE))
+        if location is not None:
+            pattern = f"%{_escape_like(location)}%"
+            stmt = stmt.where(JobPosting.location.ilike(pattern, escape=_LIKE_ESCAPE))
         if scored is True:
             stmt = stmt.where(match_col.id.isnot(None))
         elif scored is False:
@@ -203,6 +207,7 @@ class JobRepository:
         source: str | None = None,
         query: str | None = None,
         company: str | None = None,
+        location: str | None = None,
         scored: bool | None = None,
         min_fit: float | None = None,
         max_fit: float | None = None,
@@ -246,6 +251,7 @@ class JobRepository:
             source=source,
             query=query,
             company=company,
+            location=location,
             scored=scored,
             min_fit=min_fit,
             max_fit=max_fit,

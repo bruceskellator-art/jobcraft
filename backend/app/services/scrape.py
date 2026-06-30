@@ -17,6 +17,20 @@ from app.scrapers.types import JobFilters, RawJobPosting, ScrapeRunLog
 logger = logging.getLogger(__name__)
 
 
+def _location_matches(location: str | None, wanted: list[str] | None) -> bool:
+    """Return True if *location* matches any *wanted* term (case-insensitive substring).
+
+    No filter (empty/None wanted) matches everything. A posting with an unknown
+    location is kept — many boards omit it, and excluding would drop real roles.
+    """
+    if not wanted:
+        return True
+    if not location:
+        return True
+    low = location.lower()
+    return any(w.strip().lower() in low for w in wanted if w.strip())
+
+
 async def run_scrape(
     session: AsyncSession,
     sources: list[JobSource],
@@ -59,6 +73,10 @@ async def run_scrape(
         source_error: str | None = None
         try:
             async for raw in source.list_jobs(filters):  # type: ignore[attr-defined]
+                # Source-agnostic location narrowing: company boards (Greenhouse/
+                # Lever) return global roles, so honor filters.locations here.
+                if not _location_matches(raw.location, filters.locations):
+                    continue
                 total_listed += 1
                 posting = await _process_one(
                     raw=raw,
