@@ -8,6 +8,8 @@ import { listApplications, listJobs, updateApplicationStatus } from '@/lib/api'
 import { KanbanColumn } from '@/components/applications/KanbanColumn'
 import type { ApplicationCardData } from '@/components/applications/ApplicationCard'
 import { ProposedEvents } from '@/components/applications/ProposedEvents'
+import { useEntrance } from '@/hooks/useEntrance'
+import { MOTION } from '@/lib/motion'
 
 interface Column {
   id: string
@@ -97,6 +99,12 @@ function fetchReducer(state: FetchState, action: FetchAction): FetchState {
 
 export default function ApplicationsPage() {
   const [fetchState, dispatch] = useReducer(fetchReducer, { status: 'loading' })
+
+  // Kanban columns stagger in once data loads.
+  const boardRef = useEntrance<HTMLDivElement>({
+    stagger: MOTION.stagger,
+    deps: [fetchState.status],
+  })
 
   const loadData = useCallback((signal: AbortSignal) => {
     Promise.all([
@@ -205,22 +213,23 @@ export default function ApplicationsPage() {
                 loadData(controller.signal)
               }}
             />
-            <div className="grid grid-cols-5 gap-4 min-w-[1060px]">
+            <div ref={boardRef} className="grid grid-cols-5 gap-4 min-w-[1060px]">
               {COLUMNS.map((col) => {
                 const colApps = applications.filter((a) => col.statuses.includes(a.status))
                 return (
-                  <KanbanColumn
-                    key={col.id}
-                    id={col.id}
-                    label={col.label}
-                    dotColor={col.dotColor}
-                    countColor={col.countColor}
-                    countBg={col.countBg}
-                    applications={colApps}
-                    jobsById={jobsById}
-                    onStatusChange={handleStatusChange}
-                    onDrop={handleDrop}
-                  />
+                  <div key={col.id} data-animate>
+                    <KanbanColumn
+                      id={col.id}
+                      label={col.label}
+                      dotColor={col.dotColor}
+                      countColor={col.countColor}
+                      countBg={col.countBg}
+                      applications={colApps}
+                      jobsById={jobsById}
+                      onStatusChange={handleStatusChange}
+                      onDrop={handleDrop}
+                    />
+                  </div>
                 )
               })}
             </div>

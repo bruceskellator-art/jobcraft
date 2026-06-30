@@ -189,7 +189,7 @@ export default function DashboardPage() {
 
       {/* Body */}
       <div ref={bodyRef} className="p-6 space-y-5">
-        {/* Stat tiles */}
+        {/* Stat tiles — each tile carries data-animate so they cascade left→right */}
         <section className="grid grid-cols-4 gap-4">
           {statTiles.map((tile) => (
             <StatTile
@@ -203,7 +203,7 @@ export default function DashboardPage() {
           ))}
         </section>
 
-        {/* Middle row */}
+        {/* Middle row — TopMatchesList and the right column each animate as panels */}
         <div className="grid grid-cols-3 gap-5">
           <TopMatchesList />
           <div data-animate className="space-y-4">

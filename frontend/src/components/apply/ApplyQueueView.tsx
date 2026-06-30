@@ -165,7 +165,7 @@ export function ApplyQueueView() {
         >
           <span
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold"
-            style={{ background: 'var(--green-fg)', color: 'var(--green-bg)' }}
+            style={{ background: 'var(--autopilot-pill-bg)', color: 'var(--autopilot-pill-fg)' }}
           >
             autopilot {autopilot.mode}
           </span>

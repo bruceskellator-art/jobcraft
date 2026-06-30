@@ -14,6 +14,8 @@ import {
 } from '@/lib/api'
 import { ExperienceSection } from '@/components/experience/ExperienceSection'
 import { ExperienceForm } from '@/components/experience/ExperienceForm'
+import { useEntrance } from '@/hooks/useEntrance'
+import { MOTION } from '@/lib/motion'
 
 const KIND_ORDER: ExperienceKind[] = ['work', 'project', 'education', 'skill', 'achievement']
 const GRID_KINDS = new Set<ExperienceKind>(['skill', 'project'])
@@ -40,6 +42,12 @@ export function ExperienceView() {
 
   const [isImporting, setIsImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Entrance animation — replay when items load (isLoading flips to false).
+  const sectionsRef = useEntrance<HTMLDivElement>({
+    stagger: MOTION.stagger,
+    deps: [isLoading],
+  })
 
   useEffect(() => {
     const controller = new AbortController()
@@ -176,7 +184,7 @@ export function ExperienceView() {
         </button>
       </div>
 
-      <div className="p-6 space-y-5">
+      <div ref={sectionsRef} className="p-6 space-y-5">
         {isLoading && (
           <div className="empty py-16">Loading experience items…</div>
         )}
@@ -202,22 +210,23 @@ export function ExperienceView() {
         {!isLoading && !loadError && items.length > 0 && (
           <>
             {fullWidthKinds.map(kind => (
-              <ExperienceSection
-                key={kind}
-                kind={kind}
-                items={grouped[kind] ?? []}
-                onEdit={handleEditClick}
-                onDelete={handleDeleteClick}
-                onReorder={
-                  REORDERABLE_KINDS.has(kind)
-                    ? newItems => handleReorder(kind, newItems)
-                    : undefined
-                }
-              />
+              <div key={kind} data-animate>
+                <ExperienceSection
+                  kind={kind}
+                  items={grouped[kind] ?? []}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                  onReorder={
+                    REORDERABLE_KINDS.has(kind)
+                      ? newItems => handleReorder(kind, newItems)
+                      : undefined
+                  }
+                />
+              </div>
             ))}
 
             {gridKinds.length > 0 && (
-              <div className={gridKinds.length > 1 ? 'grid grid-cols-2 gap-5' : ''}>
+              <div data-animate className={gridKinds.length > 1 ? 'grid grid-cols-2 gap-5' : ''}>
                 {gridKinds.map(kind => (
                   <ExperienceSection
                     key={kind}

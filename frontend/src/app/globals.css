@@ -105,6 +105,8 @@
   --red-bg: #fef2f2;    --red-fg: #b91c1c;
   --blue-bg: #e0f2fe;   --blue-fg: #0369a1;
   --green-bg: #e6f6ec;  --green-fg: #15803d;
+  /* Autopilot pill — solid background ensures WCAG AA in both themes */
+  --autopilot-pill-bg: #15803d;  --autopilot-pill-fg: #e6f6ec;
   --amber-bg: #fff7ed;  --amber-fg: #b45309;
   --violet-bg: #eef0ff; --violet-fg: #4f46e5;
   --neutral-bg: #f3f8fc; --neutral-fg: #5b7488;
@@ -159,6 +161,8 @@
   --red-bg: rgba(248,113,113,.15);    --red-fg: #fca5a5;
   --blue-bg: rgba(56,189,248,.15);    --blue-fg: #7dd3fc;
   --green-bg: rgba(34,197,94,.15);    --green-fg: #4ade80;
+  /* Autopilot pill — dark green bg + bright lime text ≈7:1 contrast */
+  --autopilot-pill-bg: #166534;  --autopilot-pill-fg: #4ade80;
   --amber-bg: rgba(245,158,11,.15);   --amber-fg: #fbbf24;
   --violet-bg: rgba(129,140,248,.16); --violet-fg: #a5b4fc;
   --neutral-bg: #18243a; --neutral-fg: #93a4b8;
