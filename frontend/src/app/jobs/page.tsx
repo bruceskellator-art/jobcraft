@@ -5,7 +5,7 @@ import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { toast } from 'sonner'
 import { ScanSearchIcon } from 'lucide-react'
-import { entrance, MOTION } from '@/lib/motion'
+import { entrance } from '@/lib/motion'
 import { Toaster } from '@/components/ui/sonner'
 import {
   Tooltip,
@@ -295,10 +295,10 @@ export default function JobsPage() {
   const total = fetchState.status === 'success' ? fetchState.total : 0
 
   const tableRef = useRef<HTMLDivElement>(null)
-  // Snappy staggered fade-in keyed on result set — replays only when the job
-  // IDs change (filter/page/refetch), NOT on unrelated state changes such as
-  // the Sheet open/close toggle. Using a ref-tracked prev signature avoids
-  // revertOnUpdate replaying (and flashing) on every re-render.
+  // Single simultaneous fade-in keyed on result set — all rows appear together
+  // (no top-to-bottom cascade). Replays only when the job IDs change
+  // (filter/page/refetch), NOT on unrelated re-renders such as the Sheet
+  // open/close toggle — a ref-tracked prev signature avoids the revert flash.
   const rowsSignature = jobs.map(j => j.id).join(',')
   const prevSignatureRef = useRef('')
   useGSAP(
@@ -308,7 +308,7 @@ export default function JobsPage() {
       prevSignatureRef.current = rowsSignature
       const rows = gsap.utils.toArray<HTMLElement>('tbody tr.data-row', tableRef.current)
       if (rows.length === 0) return
-      entrance(rows, { stagger: MOTION.staggerTight, y: 6, duration: 0.3 })
+      entrance(rows, { stagger: 0, y: 4, duration: 0.3 })
     },
     { scope: tableRef, dependencies: [rowsSignature] },
   )

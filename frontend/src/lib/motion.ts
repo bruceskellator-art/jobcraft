@@ -73,7 +73,17 @@ export function entrance(
     stagger,
     ease: MOTION.ease,
     overwrite: 'auto',
+    // Cards carry a CSS `transition: transform` (globals.css `.rounded-xl.border-border`).
+    // Left active, that transition chases GSAP's per-frame transform writes and finishes
+    // AFTER the tween — a post-reveal "jerk" whose rate is the CSS timing. Disable the
+    // transition for the duration of the entrance, then restore it so hover lift still works.
+    onStart() {
+      gsap.set(targets, { transitionProperty: 'none' })
+    },
     clearProps: 'opacity,transform',
+    onComplete() {
+      gsap.set(targets, { clearProps: 'transitionProperty' })
+    },
   })
 }
 
