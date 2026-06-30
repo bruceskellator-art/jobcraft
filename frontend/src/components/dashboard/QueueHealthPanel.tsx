@@ -75,7 +75,7 @@ export function QueueHealthPanel() {
       if (!containerRef.current) return
       animateBar(
         gsap.utils.toArray<HTMLElement>('[data-bar]', containerRef.current),
-        { stagger: 0.08 },
+        { stagger: 0.08, delay: 0.35 },
       )
     },
     { scope: containerRef, dependencies: [counts], revertOnUpdate: true },

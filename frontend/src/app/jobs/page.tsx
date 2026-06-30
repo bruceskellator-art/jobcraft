@@ -295,16 +295,22 @@ export default function JobsPage() {
   const total = fetchState.status === 'success' ? fetchState.total : 0
 
   const tableRef = useRef<HTMLDivElement>(null)
-  // Snappy staggered fade-in keyed on result set — replays on every filter/page change.
+  // Snappy staggered fade-in keyed on result set — replays only when the job
+  // IDs change (filter/page/refetch), NOT on unrelated state changes such as
+  // the Sheet open/close toggle. Using a ref-tracked prev signature avoids
+  // revertOnUpdate replaying (and flashing) on every re-render.
   const rowsSignature = jobs.map(j => j.id).join(',')
+  const prevSignatureRef = useRef('')
   useGSAP(
     () => {
       if (!tableRef.current) return
+      if (rowsSignature === prevSignatureRef.current) return
+      prevSignatureRef.current = rowsSignature
       const rows = gsap.utils.toArray<HTMLElement>('tbody tr.data-row', tableRef.current)
       if (rows.length === 0) return
       entrance(rows, { stagger: MOTION.staggerTight, y: 6, duration: 0.3 })
     },
-    { scope: tableRef, dependencies: [rowsSignature], revertOnUpdate: true },
+    { scope: tableRef, dependencies: [rowsSignature] },
   )
 
   const rangeStart = total === 0 ? 0 : offset + 1

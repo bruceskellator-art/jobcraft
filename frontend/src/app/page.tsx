@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useEntrance } from '@/hooks/useEntrance'
+import { MOTION } from '@/lib/motion'
 import { StatTile } from '@/components/dashboard/StatTile'
 import { TopMatchesList } from '@/components/dashboard/TopMatchesList'
 import { QueueHealthPanel } from '@/components/dashboard/QueueHealthPanel'
@@ -67,12 +68,12 @@ function dashboardReducer(_state: DashboardState, action: DashboardAction): Dash
 
 export default function DashboardPage() {
   const router = useRouter()
-  const bodyRef = useEntrance<HTMLDivElement>({ stagger: 0.05 })
   const [isQueuingScrape, setIsQueuingScrape] = useState(false)
   const [state, dispatch] = useReducer(dashboardReducer, {
     isLoading: true,
     data: INITIAL_DATA,
   })
+  const bodyRef = useEntrance<HTMLDivElement>({ stagger: MOTION.stagger, deps: [state.isLoading] })
 
   const handleRunScrape = useCallback(async () => {
     if (isQueuingScrape) return
