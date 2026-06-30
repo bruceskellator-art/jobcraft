@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { CompanyMultiSelect } from '@/components/settings/CompanyMultiSelect'
+import { LocationSelect } from '@/components/settings/LocationSelect'
 
 const MIN_LOOKBACK_DAYS = 1
 const MAX_LOOKBACK_DAYS = 90
@@ -91,22 +92,17 @@ export function ScrapeProfileForm({
           onChange={v => update('companies', v)}
         />
         <p className="text-xs text-muted-foreground">
-          Also scrape these companies&apos; Greenhouse/Lever boards.
+          Leave empty to search only LinkedIn + MyCareersFuture.
         </p>
       </div>
 
       <div className="space-y-1.5">
-        <label
-          htmlFor="scrape-location"
-          className="block text-xs font-medium text-muted-foreground"
-        >
+        <label className="block text-xs font-medium text-muted-foreground">
           Location <span className="font-normal">(optional)</span>
         </label>
-        <Input
-          id="scrape-location"
+        <LocationSelect
           value={config.location}
-          onChange={e => update('location', e.target.value)}
-          placeholder="Singapore"
+          onChange={v => update('location', v)}
         />
         <p className="text-xs text-muted-foreground">
           Filter results by city or country.

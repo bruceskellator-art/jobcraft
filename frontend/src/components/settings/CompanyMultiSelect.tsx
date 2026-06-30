@@ -79,6 +79,25 @@ export function CompanyMultiSelect({
               className="h-7 border-0 px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
               autoFocus
             />
+            {options.length > 0 && (
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onChange([...options])}
+                  className="cursor-pointer rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange([])}
+                  disabled={selected.length === 0}
+                  className="cursor-pointer rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
           </div>
           <div
             role="listbox"
