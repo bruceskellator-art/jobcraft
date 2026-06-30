@@ -1,111 +1,82 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { CompanyLogo } from '@/components/common/CompanyLogo'
+import { listJobs } from '@/lib/api'
+import { sourceLabel } from '@/lib/sources'
+import { relativeTime } from '@/lib/relativeTime'
+import type { JobPosting } from '@/types/job'
 
-type SkillVariant = 'skill-ml' | 'skill-fe' | 'skill-be' | 'skill-infra' | 'skill-gen'
-type ChipVariant = 'chip-high' | 'chip-mid' | 'chip-low'
+const TOP_MATCHES_LIMIT = 5
 
-interface SkillTag {
-  label: string
-  variant: SkillVariant
+function fitChipVariant(score: number): string {
+  if (score >= 0.75) return 'chip-high'
+  if (score >= 0.5) return 'chip-mid'
+  return 'chip-low'
 }
-
-interface JobMatch {
-  id: string
-  company: string
-  title: string
-  skills: SkillTag[]
-  source: string
-  age: string
-  score: string
-  chipVariant: ChipVariant
-}
-
-const TOP_MATCHES: JobMatch[] = [
-  {
-    id: 'fde',
-    company: 'Stripe',
-    title: 'Forward Deployed Engineer',
-    skills: [
-      { label: 'Python', variant: 'skill-be' },
-      { label: 'React', variant: 'skill-fe' },
-      { label: 'SQL', variant: 'skill-gen' },
-    ],
-    source: 'GH',
-    age: '1d',
-    score: '0.89',
-    chipVariant: 'chip-high',
-  },
-  {
-    id: 'aise',
-    company: 'Brainbase',
-    title: 'AI Solutions Engineer',
-    skills: [
-      { label: 'Python', variant: 'skill-ml' },
-      { label: 'LLMs', variant: 'skill-ml' },
-      { label: 'PyTorch', variant: 'skill-ml' },
-    ],
-    source: 'LI',
-    age: '2d',
-    score: '0.81',
-    chipVariant: 'chip-high',
-  },
-  {
-    id: 'aie',
-    company: 'Greythorn',
-    title: 'AI Engineer (LLM Platform)',
-    skills: [
-      { label: 'Python', variant: 'skill-ml' },
-      { label: 'FastAPI', variant: 'skill-be' },
-      { label: 'RAG', variant: 'skill-ml' },
-    ],
-    source: 'MCF',
-    age: '3d',
-    score: '0.64',
-    chipVariant: 'chip-mid',
-  },
-]
 
 export function TopMatchesList() {
+  const [jobs, setJobs] = useState<JobPosting[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    listJobs({ sort: 'fit', scored: true, limit: TOP_MATCHES_LIMIT }, controller.signal)
+      .then((page) => {
+        if (controller.signal.aborted) return
+        setJobs(page.items)
+        setIsLoading(false)
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return
+        setIsLoading(false)
+      })
+    return () => controller.abort()
+  }, [])
+
   return (
-    <section className="col-span-2 bg-card border border-border rounded-xl">
+    <section data-animate className="col-span-2 bg-card border border-border rounded-xl">
       <div className="px-4 py-3 border-b border-border flex items-center justify-between">
         <h2 className="text-sm font-semibold">Top new matches today</h2>
-        <Link
-          href="/jobs"
-          className="text-xs font-medium"
-          style={{ color: '#4f46e5' }}
-        >
-          See all 34 →
+        <Link href="/jobs" className="text-xs font-medium text-primary hover:underline">
+          See all →
         </Link>
       </div>
-      <div className="divide-y divide-border">
-        {TOP_MATCHES.map((job) => (
-          <div
-            key={job.id}
-            className="flex items-center gap-3 px-4 py-3 data-row"
-          >
-            <CompanyLogo company={job.company} size="sm" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-foreground">{job.title}</div>
-              <div className="flex items-center gap-1.5 mt-1">
-                {job.skills.map((skill) => (
-                  <span key={skill.label} className={`skill-tag ${skill.variant}`}>
-                    {skill.label}
-                  </span>
-                ))}
-                <span className="source-pill ml-0.5">{job.source}</span>
+
+      {isLoading ? (
+        <div className="empty py-10 px-4">Loading matches…</div>
+      ) : jobs.length === 0 ? (
+        <div className="empty py-10 px-4">No matches yet — run a scrape and score jobs</div>
+      ) : (
+        <div className="divide-y divide-border">
+          {jobs.map((job) => {
+            const score = job.match?.overall_score ?? 0
+            return (
+              <div key={job.id} className="flex items-center gap-3 px-4 py-3 data-row">
+                <CompanyLogo company={job.company} logoUrl={job.company_logo_url} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">{job.title}</div>
+                  <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+                    <span className="truncate">{job.company}</span>
+                    <span className="source-pill ml-0.5">{sourceLabel(job.source)}</span>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground w-12 text-right num flex-none">
+                  {relativeTime(job.scraped_at)}
+                </div>
+                <span className={`chip ${fitChipVariant(score)} flex-none`}>{score.toFixed(2)}</span>
+                <Link
+                  href={`/jobs/${job.id}`}
+                  className="btn btn-ghost text-xs flex-none cursor-pointer"
+                >
+                  View
+                </Link>
               </div>
-            </div>
-            <div className="text-xs text-muted-foreground w-12 text-right num flex-none">
-              {job.age}
-            </div>
-            <span className={`chip ${job.chipVariant} flex-none`}>{job.score}</span>
-            <Link href="/jobs" className="btn btn-ghost text-xs flex-none">
-              View
-            </Link>
-          </div>
-        ))}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

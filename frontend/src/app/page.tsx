@@ -1,13 +1,17 @@
 'use client'
 
-import { useEffect, useCallback, useReducer } from 'react'
+import { useEffect, useCallback, useReducer, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { useEntrance } from '@/hooks/useEntrance'
 import { StatTile } from '@/components/dashboard/StatTile'
 import { TopMatchesList } from '@/components/dashboard/TopMatchesList'
 import { QueueHealthPanel } from '@/components/dashboard/QueueHealthPanel'
 import { SourcesPanel } from '@/components/dashboard/SourcesPanel'
 import { RecentActivity } from '@/components/dashboard/RecentActivity'
-import { listJobs, listApplications, getCallCost } from '@/lib/api'
+import { Toaster } from '@/components/ui/sonner'
+import { listJobs, listApplications, getCallCost, getScrapeProfile, enqueueScrape } from '@/lib/api'
 import type { CallCostResponse } from '@/types/observability'
 
 const FLAT_SPARKLINE = [
@@ -62,10 +66,35 @@ function dashboardReducer(_state: DashboardState, action: DashboardAction): Dash
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const bodyRef = useEntrance<HTMLDivElement>({ stagger: 0.05 })
+  const [isQueuingScrape, setIsQueuingScrape] = useState(false)
   const [state, dispatch] = useReducer(dashboardReducer, {
     isLoading: true,
     data: INITIAL_DATA,
   })
+
+  const handleRunScrape = useCallback(async () => {
+    if (isQueuingScrape) return
+    setIsQueuingScrape(true)
+    try {
+      const profile = await getScrapeProfile()
+      const hasQuery = profile.query.trim().length > 0
+      const hasCompanies = profile.companies.length > 0
+      if (!hasQuery && !hasCompanies) {
+        toast.info('Set up a search query in Settings first')
+        router.push('/settings')
+        return
+      }
+      await enqueueScrape(profile)
+      toast.success('Scrape queued — track it on Activity')
+      router.push('/activity')
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to queue scrape.')
+    } finally {
+      setIsQueuingScrape(false)
+    }
+  }, [isQueuingScrape, router])
 
   const loadData = useCallback((signal: AbortSignal) => {
     // Resilient parallel fetches — one failing call shows '—' without crashing
@@ -78,7 +107,7 @@ export default function DashboardPage() {
       dispatch({
         type: 'fetch_done',
         data: {
-          jobCount: jobsResult.status === 'fulfilled' ? jobsResult.value.length : null,
+          jobCount: jobsResult.status === 'fulfilled' ? jobsResult.value.total : null,
           appCount: appsResult.status === 'fulfilled' ? appsResult.value.length : null,
           cost: costResult.status === 'fulfilled' ? costResult.value : null,
         },
@@ -135,6 +164,7 @@ export default function DashboardPage() {
 
   return (
     <>
+      <Toaster />
       {/* Header */}
       <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6 sticky top-0 z-10">
         <div>
@@ -144,7 +174,13 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn btn-ghost">Run scrape</button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => void handleRunScrape()}
+            disabled={isQueuingScrape}
+          >
+            {isQueuingScrape ? 'Queuing…' : 'Run scrape'}
+          </button>
           <Link href="/apply-queue" className="btn btn-primary">
             Review apply queue
           </Link>
@@ -152,7 +188,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Body */}
-      <div className="p-6 space-y-5">
+      <div ref={bodyRef} className="p-6 space-y-5">
         {/* Stat tiles */}
         <section className="grid grid-cols-4 gap-4">
           {statTiles.map((tile) => (
@@ -170,14 +206,16 @@ export default function DashboardPage() {
         {/* Middle row */}
         <div className="grid grid-cols-3 gap-5">
           <TopMatchesList />
-          <div className="space-y-4">
+          <div data-animate className="space-y-4">
             <QueueHealthPanel />
             <SourcesPanel />
           </div>
         </div>
 
         {/* Recent activity */}
-        <RecentActivity />
+        <div data-animate>
+          <RecentActivity />
+        </div>
       </div>
     </>
   )

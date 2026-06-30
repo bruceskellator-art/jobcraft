@@ -155,8 +155,20 @@ export function ApplyQueueView() {
       )}
 
       {autopilot && autopilot.mode !== 'off' && (
-        <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-2 text-xs text-emerald-700 flex items-center gap-2">
-          <span className="toggle-on">autopilot {autopilot.mode}</span>
+        <div
+          className="mx-6 mt-4 rounded-lg border px-4 py-2.5 text-xs flex items-center gap-2"
+          style={{
+            background: 'var(--green-bg)',
+            borderColor: 'color-mix(in srgb, var(--green-fg) 30%, transparent)',
+            color: 'var(--green-fg)',
+          }}
+        >
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold"
+            style={{ background: 'var(--green-fg)', color: 'var(--green-bg)' }}
+          >
+            autopilot {autopilot.mode}
+          </span>
           <span>
             Sources: {autopilot.auto_submit_sources.join(', ') || 'none'} · min confidence{' '}
             {Math.round(autopilot.min_confidence * 100)}%
