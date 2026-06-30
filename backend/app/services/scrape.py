@@ -82,7 +82,10 @@ async def run_scrape(
 
         logger.info(
             "run_scrape: source=%s listed=%d new=%d failed=%d",
-            source.name, total_listed, total_new, total_failed,
+            source.name,
+            total_listed,
+            total_new,
+            total_failed,
         )
         all_logs.append(
             ScrapeRunLog(
@@ -119,7 +122,7 @@ async def execute_scrape_run(
 ) -> None:
     """Run a scrape in the background, recording lifecycle + results on the ScrapeRun row.
 
-    Reconstructs the request (boards/companies/keywords, filters, extract flag) from
+    Reconstructs the request (query, companies, filters, extract flag) from
     the persisted ``ScrapeRun.request`` snapshot, so the only argument the caller —
     whether the in-process scheduler or an arq worker — must carry across the
     boundary is the ``run_id``.
@@ -143,19 +146,17 @@ async def execute_scrape_run(
 
         sources: list[JobSource] = []
         try:
-            sources = source_factory(
-                request.greenhouse_boards, request.lever_companies,
-                request.mcf_keywords, request.linkedin_keywords,
+            sources = source_factory(request.query, request.companies)
+            effective_filters = (
+                request.filters.model_copy(update={"keywords": [request.query.strip()]})
+                if request.query.strip()
+                else request.filters
             )
-            llm = (
-                llm_factory(session)
-                if (request.extract and llm_factory is not None)
-                else None
-            )
+            llm = llm_factory(session) if (request.extract and llm_factory is not None) else None
             created, logs = await run_scrape(
                 session=session,
                 sources=sources,
-                filters=request.filters,
+                filters=effective_filters,
                 llm=llm,
                 extract=request.extract,
             )

@@ -150,8 +150,9 @@ async def gen_client(session: AsyncSession):
         return NullPdfRenderer()
 
     def _fake_source_factory():
-        def _build(greenhouse_boards, lever_companies):
-            return [_FakeSource(f"greenhouse:{b}", [_RAW_JOB]) for b in greenhouse_boards]
+        def _build(query, companies=None):
+            return [_FakeSource(f"greenhouse:{c}", [_RAW_JOB]) for c in companies or []]
+
         return _build
 
     from app.deps import get_source_factory
@@ -164,9 +165,7 @@ async def gen_client(session: AsyncSession):
     application.dependency_overrides[get_pdf_renderer] = _override_pdf
     application.dependency_overrides[get_source_factory] = _fake_source_factory
 
-    async with AsyncClient(
-        transport=ASGITransport(app=application), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=application), base_url="http://test") as ac:
         yield ac, user
 
     application.dependency_overrides.clear()
@@ -205,8 +204,9 @@ async def gen_client_other_user(session: AsyncSession):
         return NullPdfRenderer()
 
     def _fake_source_factory():
-        def _build(greenhouse_boards, lever_companies):
-            return [_FakeSource(f"greenhouse:{b}", [_RAW_JOB]) for b in greenhouse_boards]
+        def _build(query, companies=None):
+            return [_FakeSource(f"greenhouse:{c}", [_RAW_JOB]) for c in companies or []]
+
         return _build
 
     from app.deps import get_source_factory
@@ -219,9 +219,7 @@ async def gen_client_other_user(session: AsyncSession):
     application.dependency_overrides[get_pdf_renderer] = _override_pdf
     application.dependency_overrides[get_source_factory] = _fake_source_factory
 
-    async with AsyncClient(
-        transport=ASGITransport(app=application), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=application), base_url="http://test") as ac:
         yield ac, other_user
 
     application.dependency_overrides.clear()
@@ -236,9 +234,9 @@ async def _seed_job(client: AsyncClient) -> str:
     """Scrape one job and return its ID."""
     await client.post(
         "/api/jobs/scrape",
-        json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+        json={"companies": ["acme"], "filters": {}},
     )
-    jobs = (await client.get("/api/jobs")).json()
+    jobs = (await client.get("/api/jobs")).json()["items"]
     assert len(jobs) >= 1, "Expected at least one job after scrape"
     return jobs[0]["id"]
 
@@ -249,9 +247,7 @@ async def _seed_job(client: AsyncClient) -> str:
 
 
 class TestGenerateArtifact:
-    async def test_generate_resume_returns_artifact_read_with_scores(
-        self, gen_client
-    ) -> None:
+    async def test_generate_resume_returns_artifact_read_with_scores(self, gen_client) -> None:
         client, user = gen_client
         job_id = await _seed_job(client)
 
@@ -276,9 +272,7 @@ class TestGenerateArtifact:
         assert "quantified_impact" in scores
         assert "clarity" in scores
 
-    async def test_generate_cover_letter_returns_correct_kind(
-        self, gen_client
-    ) -> None:
+    async def test_generate_cover_letter_returns_correct_kind(self, gen_client) -> None:
         client, _ = gen_client
         job_id = await _seed_job(client)
 
@@ -301,9 +295,7 @@ class TestGenerateArtifact:
 
         assert response.status_code == 404
 
-    async def test_generate_uses_default_style_when_omitted(
-        self, gen_client
-    ) -> None:
+    async def test_generate_uses_default_style_when_omitted(self, gen_client) -> None:
         client, _ = gen_client
         job_id = await _seed_job(client)
 
@@ -387,9 +379,7 @@ class TestGetArtifact:
     async def test_returns_artifact_for_owner(self, gen_client) -> None:
         client, _ = gen_client
         job_id = await _seed_job(client)
-        gen_resp = await client.post(
-            f"/api/jobs/{job_id}/generate", json={"kind": "resume"}
-        )
+        gen_resp = await client.post(f"/api/jobs/{job_id}/generate", json={"kind": "resume"})
         artifact_id = gen_resp.json()["id"]
 
         response = await client.get(f"/api/artifacts/{artifact_id}")
@@ -411,9 +401,7 @@ class TestGetArtifact:
         # User A generates an artifact
         client_a, _ = gen_client
         job_id = await _seed_job(client_a)
-        gen_resp = await client_a.post(
-            f"/api/jobs/{job_id}/generate", json={"kind": "resume"}
-        )
+        gen_resp = await client_a.post(f"/api/jobs/{job_id}/generate", json={"kind": "resume"})
         artifact_id = gen_resp.json()["id"]
 
         # User B tries to access it
@@ -429,9 +417,7 @@ class TestGetArtifact:
 
 
 class TestUploadBaseline:
-    async def test_upload_valid_pdf_returns_baseline_artifact(
-        self, gen_client
-    ) -> None:
+    async def test_upload_valid_pdf_returns_baseline_artifact(self, gen_client) -> None:
         client, user = gen_client
         pdf_bytes = _make_small_pdf()
 

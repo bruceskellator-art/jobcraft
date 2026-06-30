@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import get_session
-from app.db.models.job_posting import JobPosting
-from app.db.models.match import Match as MatchModel
 from app.db.models.user import User
 from app.deps import (
     get_current_user,
@@ -19,10 +18,17 @@ from app.deps import (
 from app.llm.client import LLMClient
 from app.repositories.job import JobRepository
 from app.repositories.scrape_run import ScrapeRunRepository
-from app.schemas.job import JobPostingRead, ScrapeRequest, ScrapeResponse, ScrapeRunLogView
+from app.schemas.job import (
+    JobPostingPage,
+    JobPostingRead,
+    ScrapeRequest,
+    ScrapeResponse,
+    ScrapeRunLogView,
+)
 from app.schemas.match import MatchRead
 from app.schemas.scrape_run import ScrapeRunView
 from app.scrapers.base import JobSource
+from app.scrapers.registry import company_names
 from app.services.scrape import run_scrape
 from app.services.scrape_dispatch import ScrapeDispatcher
 
@@ -33,29 +39,56 @@ def _get_repo(session: AsyncSession = Depends(get_session)) -> JobRepository:  #
     return JobRepository(session)
 
 
-@router.get("", response_model=list[JobPostingRead])
+@router.get("", response_model=JobPostingPage)
 async def list_jobs(
     source: str | None = None,
     q: str | None = None,
+    company: str | None = None,
+    scored: bool | None = None,
+    min_fit: float | None = Query(default=None, ge=0.0, le=1.0),
+    max_fit: float | None = Query(default=None, ge=0.0, le=1.0),
+    posted_within_days: int | None = Query(default=None, ge=1),
+    sort: Literal["recent", "fit"] = "recent",
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_session),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
-) -> list[JobPostingRead]:
-    """List job postings with optional source and full-text query filters.
+) -> JobPostingPage:
+    """List job postings with filtering, fit-aware sorting, and pagination.
 
-    Each posting includes the current user's latest Match (or null if not matched).
+    Each item embeds the current user's latest Match (or null if not matched).
+    Returns a JobPostingPage envelope (items/total/limit/offset).
     """
     repo = JobRepository(session)
-    pairs: list[tuple[JobPosting, MatchModel | None]] = await repo.list_with_matches(
-        current_user.id, source=source, query=q
+    rows, total = await repo.list_page(
+        current_user.id,
+        source=source,
+        query=q,
+        company=company,
+        scored=scored,
+        min_fit=min_fit,
+        max_fit=max_fit,
+        posted_within_days=posted_within_days,
+        sort=sort,
+        limit=limit,
+        offset=offset,
     )
-    out: list[JobPostingRead] = []
-    for job, match in pairs:
+    items: list[JobPostingRead] = []
+    for job, match in rows:
         read = JobPostingRead.model_validate(job)
         read = read.model_copy(
             update={"match": MatchRead.model_validate(match) if match is not None else None}
         )
-        out.append(read)
-    return out
+        items.append(read)
+    return JobPostingPage(items=items, total=total, limit=limit, offset=offset)
+
+
+@router.get("/scrape/companies", response_model=list[str])
+async def list_curated_companies(
+    current_user: User = Depends(get_current_user),  # noqa: B008
+) -> list[str]:
+    """Return the sorted list of curated company names for the scrape multiselect."""
+    return company_names()
 
 
 @router.get("/{job_id}", response_model=JobPostingRead)
@@ -86,15 +119,17 @@ async def scrape_jobs(
     can override it to inject fake sources with no network calls.
     Each owned adapter's HTTP client is closed in a finally block.
     """
-    sources = source_factory(
-        body.greenhouse_boards, body.lever_companies,
-        body.mcf_keywords, body.linkedin_keywords,
+    sources = source_factory(body.query, body.companies)
+    effective_filters = (
+        body.filters.model_copy(update={"keywords": [body.query.strip()]})
+        if body.query.strip()
+        else body.filters
     )
     try:
         created_postings, logs = await run_scrape(
             session=session,
             sources=sources,
-            filters=body.filters,
+            filters=effective_filters,
             llm=llm if body.extract else None,
             extract=body.extract,
         )

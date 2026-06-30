@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,13 +35,16 @@ router = APIRouter(tags=["match"])
 class RunMatchRequest(BaseModel):
     """Request body for POST /api/match/run."""
 
-    limit: int = 50
+    only_unscored: bool = True
+    limit: int = 200
 
 
 class RunMatchResponse(BaseModel):
     """Response body for POST /api/match/run."""
 
     matched: int
+    failed: int
+    total: int
 
 
 @router.get("/api/jobs/{job_id}/match", response_model=MatchRead)
@@ -73,7 +76,7 @@ async def get_job_match(
 
 @router.post("/api/match/run", response_model=RunMatchResponse)
 async def run_match(
-    body: RunMatchRequest = RunMatchRequest(),  # noqa: B008
+    body: RunMatchRequest = Body(default_factory=RunMatchRequest),  # noqa: B008
     session: AsyncSession = Depends(get_session),  # noqa: B008
     current_user: User = Depends(get_current_user),  # noqa: B008
     llm: LLMClient = Depends(get_llm_client),  # noqa: B008
@@ -85,8 +88,14 @@ async def run_match(
     Per-job failures are isolated — a single bad job does not abort the run.
     Commits the session after all jobs have been processed.
     """
-    count = await match_all_jobs(
-        session, llm, embed, store, current_user.id, limit=body.limit
+    counts = await match_all_jobs(
+        session,
+        llm,
+        embed,
+        store,
+        current_user.id,
+        limit=body.limit,
+        only_unscored=body.only_unscored,
     )
     await session.commit()
-    return RunMatchResponse(matched=count)
+    return RunMatchResponse(**counts)

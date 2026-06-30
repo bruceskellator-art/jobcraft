@@ -5,7 +5,7 @@ with the matcher service (prefilter + LLM judge) and exposes three entry points:
 
 - ``ensure_user_indexed``  — idempotent: index user experience into vector store.
 - ``match_job``            — run full match for a single job, return a Match row.
-- ``match_all_jobs``       — bulk-match the N most-recent jobs; return count matched.
+- ``match_all_jobs``       — bulk-match recent jobs; return {matched, failed, total}.
 """
 
 from __future__ import annotations
@@ -74,27 +74,40 @@ async def match_all_jobs(
     user_id: uuid.UUID,
     *,
     limit: int = _DEFAULT_JOB_LIMIT,
-) -> int:
-    """Match the *limit* most-recent job postings for *user_id*.
+    only_unscored: bool = True,
+) -> dict[str, int]:
+    """Match up to *limit* most-recent job postings for *user_id*.
 
-    Per-job failures are logged and skipped — a single bad job does not abort
-    the entire run. Returns the count of successfully matched jobs.
+    When ``only_unscored`` (the default), jobs that already have a Match for this
+    user are excluded via a LEFT JOIN ... IS NULL, so re-runs only score new jobs.
 
-    Does NOT commit the session — the caller commits once after a successful run.
+    Per-job failures are logged and isolated with ``begin_nested()`` — a single
+    bad job does not abort the run. Returns ``{"matched", "failed", "total"}``
+    where ``total`` is the number of jobs attempted.
+
+    Kept SEQUENTIAL on purpose: the single AsyncSession is not safe for concurrent
+    tasks. Backgrounding / per-job concurrency (separate sessions) is a future step.
+
+    Does NOT commit the session — the caller commits once after the run.
     """
-    result = await session.execute(
-        select(JobPosting).order_by(JobPosting.scraped_at.desc()).limit(limit)
-    )
+    stmt = select(JobPosting)
+    if only_unscored:
+        scored_subq = select(Match.job_id).where(Match.user_id == user_id)
+        stmt = stmt.where(JobPosting.id.notin_(scored_subq))
+    stmt = stmt.order_by(JobPosting.scraped_at.desc()).limit(limit)
+
+    result = await session.execute(stmt)
     jobs = list(result.scalars().all())
 
     if not jobs:
-        logger.info("match_all_jobs: no jobs found for user %s", user_id)
-        return 0
+        logger.info("match_all_jobs: no jobs to match for user %s", user_id)
+        return {"matched": 0, "failed": 0, "total": 0}
 
     # Index the user once before the per-job loop.
     await ensure_user_indexed(session, embed, store, user_id)
 
     matched = 0
+    failed = 0
     for job in jobs:
         try:
             async with session.begin_nested():
@@ -102,6 +115,7 @@ async def match_all_jobs(
                 await compute_match(session, llm, embed, store, user_id, job)
             matched += 1
         except Exception:
+            failed += 1
             logger.exception(
                 "match_all_jobs: failed to match job %s for user %s — skipping",
                 job.id,
@@ -109,6 +123,10 @@ async def match_all_jobs(
             )
 
     logger.info(
-        "match_all_jobs: matched %d/%d jobs for user %s", matched, len(jobs), user_id
+        "match_all_jobs: matched %d failed %d of %d jobs for user %s",
+        matched,
+        failed,
+        len(jobs),
+        user_id,
     )
-    return matched
+    return {"matched": matched, "failed": failed, "total": len(jobs)}

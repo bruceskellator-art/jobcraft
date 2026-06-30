@@ -44,14 +44,26 @@ class JobPostingRead(BaseModel):
 
 
 class ScrapeRequest(BaseModel):
-    """Request body for POST /api/jobs/scrape."""
+    """Request body for scrape endpoints.
 
+    ``query`` drives the keyword sources (LinkedIn + MyCareersFuture);
+    ``companies`` are curated-registry company NAMES whose Greenhouse/Lever
+    boards are scraped. ``filters.posted_within_days`` carries the lookback.
+    """
+
+    query: str = ""
+    companies: list[str] = []
     filters: JobFilters = JobFilters()
-    greenhouse_boards: list[str] = []
-    lever_companies: list[str] = []
-    mcf_keywords: list[str] = []
-    linkedin_keywords: list[str] = []
     extract: bool = False
+
+
+class JobPostingPage(BaseModel):
+    """Paginated envelope for job-posting list responses."""
+
+    items: list[JobPostingRead]
+    total: int
+    limit: int
+    offset: int
 
 
 class ScrapeRunLogView(BaseModel):

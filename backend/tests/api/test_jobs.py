@@ -83,17 +83,14 @@ async def client(session: AsyncSession) -> AsyncClient:  # type: ignore[misc]
     async def _override_session():  # type: ignore[return]
         yield session
 
-    def _fake_factory(
-        greenhouse_boards: list[str],
-        lever_companies: list[str],
-        mcf_keywords: list[str] | None = None,
-        linkedin_keywords: list[str] | None = None,
-    ):
+    def _fake_factory(query: str, companies: list[str] | None = None):
         sources = []
-        for board in greenhouse_boards:
-            sources.append(_FakeSource(f"greenhouse:{board}", [_RAW_GREENHOUSE]))
-        for company in lever_companies:
-            sources.append(_FakeSource(f"lever:{company}", [_RAW_LEVER]))
+        for company in companies or []:
+            low = company.lower()
+            if low == "acme":
+                sources.append(_FakeSource("greenhouse:acme", [_RAW_GREENHOUSE]))
+            elif low == "beta":
+                sources.append(_FakeSource("lever:beta", [_RAW_LEVER]))
         return sources
 
     def _override_source_factory():
@@ -107,9 +104,7 @@ async def client(session: AsyncSession) -> AsyncClient:  # type: ignore[misc]
     application.dependency_overrides[get_source_factory] = _override_source_factory
     application.dependency_overrides[get_llm_client] = _override_llm_client
 
-    async with AsyncClient(
-        transport=ASGITransport(app=application), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=application), base_url="http://test") as ac:
         yield ac
 
     application.dependency_overrides.clear()
@@ -126,8 +121,7 @@ class TestScrapeEndpoint:
     async def test_scrape_returns_created_count(self, client: AsyncClient) -> None:
         # Arrange
         payload = {
-            "greenhouse_boards": ["acme"],
-            "lever_companies": [],
+            "companies": ["acme"],
             "filters": {},
         }
 
@@ -144,8 +138,7 @@ class TestScrapeEndpoint:
     async def test_scrape_multiple_sources(self, client: AsyncClient) -> None:
         # Arrange
         payload = {
-            "greenhouse_boards": ["acme"],
-            "lever_companies": ["beta"],
+            "companies": ["acme", "beta"],
             "filters": {},
         }
 
@@ -160,7 +153,7 @@ class TestScrapeEndpoint:
 
     async def test_scrape_no_sources_returns_zero(self, client: AsyncClient) -> None:
         # Arrange
-        payload = {"greenhouse_boards": [], "lever_companies": [], "filters": {}}
+        payload = {"companies": [], "filters": {}}
 
         # Act
         response = await client.post("/api/jobs/scrape", json=payload)
@@ -171,7 +164,7 @@ class TestScrapeEndpoint:
 
     async def test_scrape_dedup_on_second_call(self, client: AsyncClient) -> None:
         # Arrange — first call persists the posting
-        payload = {"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}}
+        payload = {"companies": ["acme"], "filters": {}}
         await client.post("/api/jobs/scrape", json=payload)
 
         # Act — second call with same source
@@ -182,7 +175,7 @@ class TestScrapeEndpoint:
 
     async def test_scrape_runs_field_structure(self, client: AsyncClient) -> None:
         # Arrange
-        payload = {"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}}
+        payload = {"companies": ["acme"], "filters": {}}
 
         # Act
         response = await client.post("/api/jobs/scrape", json=payload)
@@ -208,7 +201,7 @@ class TestListJobsEndpoint:
         # Arrange — seed via scrape
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
 
         # Act
@@ -217,8 +210,9 @@ class TestListJobsEndpoint:
         # Assert
         assert response.status_code == 200
         body = response.json()
-        assert len(body) == 1
-        assert body[0]["title"] == "Backend Engineer"
+        assert body["total"] == 1
+        assert len(body["items"]) == 1
+        assert body["items"][0]["title"] == "Backend Engineer"
 
     async def test_list_empty_when_no_postings(self, client: AsyncClient) -> None:
         # Arrange — no scrape called
@@ -228,15 +222,16 @@ class TestListJobsEndpoint:
 
         # Assert
         assert response.status_code == 200
-        assert response.json() == []
+        body = response.json()
+        assert body["items"] == []
+        assert body["total"] == 0
 
     async def test_list_filter_by_source(self, client: AsyncClient) -> None:
         # Arrange — seed two sources
         await client.post(
             "/api/jobs/scrape",
             json={
-                "greenhouse_boards": ["acme"],
-                "lever_companies": ["beta"],
+                "companies": ["acme", "beta"],
                 "filters": {},
             },
         )
@@ -247,16 +242,15 @@ class TestListJobsEndpoint:
         # Assert
         assert response.status_code == 200
         body = response.json()
-        assert len(body) == 1
-        assert body[0]["source"] == "lever:beta"
+        assert len(body["items"]) == 1
+        assert body["items"][0]["source"] == "lever:beta"
 
     async def test_list_filter_by_query_matches_title(self, client: AsyncClient) -> None:
         # Arrange
         await client.post(
             "/api/jobs/scrape",
             json={
-                "greenhouse_boards": ["acme"],
-                "lever_companies": ["beta"],
+                "companies": ["acme", "beta"],
                 "filters": {},
             },
         )
@@ -267,16 +261,16 @@ class TestListJobsEndpoint:
         # Assert
         assert response.status_code == 200
         body = response.json()
-        assert len(body) == 1
-        assert body[0]["title"] == "Backend Engineer"
+        assert body["total"] == 1
+        assert len(body["items"]) == 1
+        assert body["items"][0]["title"] == "Backend Engineer"
 
     async def test_list_filter_by_query_matches_company(self, client: AsyncClient) -> None:
         # Arrange
         await client.post(
             "/api/jobs/scrape",
             json={
-                "greenhouse_boards": ["acme"],
-                "lever_companies": ["beta"],
+                "companies": ["acme", "beta"],
                 "filters": {},
             },
         )
@@ -287,14 +281,14 @@ class TestListJobsEndpoint:
         # Assert
         assert response.status_code == 200
         body = response.json()
-        assert len(body) == 1
-        assert body[0]["company"] == "Beta Inc"
+        assert len(body["items"]) == 1
+        assert body["items"][0]["company"] == "Beta Inc"
 
     async def test_list_filter_no_match_returns_empty(self, client: AsyncClient) -> None:
         # Arrange
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
 
         # Act
@@ -302,7 +296,9 @@ class TestListJobsEndpoint:
 
         # Assert
         assert response.status_code == 200
-        assert response.json() == []
+        body = response.json()
+        assert body["items"] == []
+        assert body["total"] == 0
 
 
 # ---------------------------------------------------------------------------
@@ -317,10 +313,10 @@ class TestGetJobEndpoint:
         # Arrange — seed one posting
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
         listing = (await client.get("/api/jobs")).json()
-        job_id = listing[0]["id"]
+        job_id = listing["items"][0]["id"]
 
         # Act
         response = await client.get(f"/api/jobs/{job_id}")
@@ -343,10 +339,10 @@ class TestGetJobEndpoint:
         # Arrange
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
         listing = (await client.get("/api/jobs")).json()
-        job_id = listing[0]["id"]
+        job_id = listing["items"][0]["id"]
 
         # Act
         response = await client.get(f"/api/jobs/{job_id}")

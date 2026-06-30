@@ -29,6 +29,7 @@ from app.scrapers.greenhouse import GreenhouseSource
 from app.scrapers.lever import LeverSource
 from app.scrapers.linkedin import LinkedInSource
 from app.scrapers.mycareersfuture import MyCareersFutureSource
+from app.scrapers.registry import lookup
 from app.services.scrape_dispatch import (
     ArqScrapeDispatcher,
     InProcessScrapeDispatcher,
@@ -233,16 +234,13 @@ def get_email_provider(account: EmailAccount) -> EmailProvider:
     )
 
 
-def get_source_factory() -> Callable[[list[str], list[str], list[str], list[str]], list[JobSource]]:
-    """Return a factory that builds JobSource instances from board/company/keyword lists.
+def get_source_factory() -> Callable[[str, list[str]], list[JobSource]]:
+    """Return a factory that builds JobSource instances from a query + curated companies.
 
-    The factory signature is:
-        (
-            greenhouse_boards: list[str],
-            lever_companies: list[str],
-            mcf_keywords: list[str],
-            linkedin_keywords: list[str],
-        ) -> list[JobSource]
+    The factory signature is ``(query: str, companies: list[str]) -> list[JobSource]``:
+    - A non-empty ``query`` adds keyword sources (MyCareersFuture + LinkedIn).
+    - Each curated company NAME is resolved via the registry to a Greenhouse or
+      Lever board; unknown names are skipped.
 
     Each adapter created here owns its own httpx.AsyncClient.  The caller is
     responsible for calling ``aclose()`` on every source when done — or using
@@ -255,21 +253,20 @@ def get_source_factory() -> Callable[[list[str], list[str], list[str], list[str]
         app.dependency_overrides[get_source_factory] = lambda: fake_factory
     """
 
-    def _build(
-        greenhouse_boards: list[str],
-        lever_companies: list[str],
-        mcf_keywords: list[str] | None = None,
-        linkedin_keywords: list[str] | None = None,
-    ) -> list[JobSource]:
+    def _build(query: str, companies: list[str] | None = None) -> list[JobSource]:
         sources: list[JobSource] = []
-        for board in greenhouse_boards:
-            sources.append(GreenhouseSource(board_token=board))  # type: ignore[arg-type]
-        for company in lever_companies:
-            sources.append(LeverSource(company=company))  # type: ignore[arg-type]
-        if mcf_keywords:
-            sources.append(MyCareersFutureSource(keywords=mcf_keywords))  # type: ignore[arg-type]
-        if linkedin_keywords:
-            sources.append(LinkedInSource(keywords=linkedin_keywords))  # type: ignore[arg-type]
+        q = (query or "").strip()
+        if q:
+            sources.append(MyCareersFutureSource(keywords=[q]))  # type: ignore[arg-type]
+            sources.append(LinkedInSource(keywords=[q]))  # type: ignore[arg-type]
+        for name in companies or []:
+            entry = lookup(name)
+            if entry is None:
+                continue
+            if entry.greenhouse:
+                sources.append(GreenhouseSource(board_token=entry.greenhouse))  # type: ignore[arg-type]
+            if entry.lever:
+                sources.append(LeverSource(company=entry.lever))  # type: ignore[arg-type]
         return sources
 
     return _build

@@ -58,11 +58,9 @@ class _SameSessionFactory:
         return _Ctx()
 
 
-def _fake_source_build(
-    greenhouse_boards, lever_companies, mcf_keywords=None, linkedin_keywords=None
-):
-    """Source factory that yields one fake posting per greenhouse board, no network."""
-    return [_FakeSource(f"greenhouse:{b}", [_RAW]) for b in greenhouse_boards]
+def _fake_source_build(query, companies=None):
+    """Source factory that yields one fake posting per company, no network."""
+    return [_FakeSource(f"greenhouse:{c}", [_RAW]) for c in companies or []]
 
 
 class _CapturingDispatcher:
@@ -90,9 +88,7 @@ async def client(session: AsyncSession):  # type: ignore[misc]
     application.dependency_overrides[get_session] = _override_session
     application.dependency_overrides[get_scrape_dispatcher] = lambda: dispatcher
 
-    async with AsyncClient(
-        transport=ASGITransport(app=application), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=application), base_url="http://test") as ac:
         yield ac, dispatcher
 
     application.dependency_overrides.clear()
@@ -101,7 +97,7 @@ async def client(session: AsyncSession):  # type: ignore[misc]
 @pytest.mark.asyncio
 async def test_enqueue_returns_pending_run(client) -> None:
     ac, _ = client
-    resp = await ac.post("/api/jobs/scrape/runs", json={"greenhouse_boards": ["acme"]})
+    resp = await ac.post("/api/jobs/scrape/runs", json={"companies": ["acme"]})
 
     assert resp.status_code == 202
     body = resp.json()
@@ -113,7 +109,7 @@ async def test_enqueue_returns_pending_run(client) -> None:
 @pytest.mark.asyncio
 async def test_enqueued_run_appears_in_list(client) -> None:
     ac, _ = client
-    await ac.post("/api/jobs/scrape/runs", json={"greenhouse_boards": ["acme"]})
+    await ac.post("/api/jobs/scrape/runs", json={"companies": ["acme"]})
 
     listed = await ac.get("/api/jobs/scrape/runs")
     assert listed.status_code == 200
@@ -132,9 +128,7 @@ async def test_get_unknown_run_returns_404(client) -> None:
 @pytest.mark.asyncio
 async def test_background_run_succeeds_and_records_results(client, session) -> None:
     ac, dispatcher = client
-    enqueue = await ac.post(
-        "/api/jobs/scrape/runs", json={"greenhouse_boards": ["acme"]}
-    )
+    enqueue = await ac.post("/api/jobs/scrape/runs", json={"companies": ["acme"]})
     run_id = enqueue.json()["id"]
 
     # Exactly one run was dispatched; execute it now (simulating the worker).
@@ -160,7 +154,7 @@ async def test_execute_scrape_run_marks_failed_on_source_error(session: AsyncSes
     from app.repositories.scrape_run import ScrapeRunRepository
 
     repo = ScrapeRunRepository(session)
-    run = await repo.create(_USER_ID, {"greenhouse_boards": ["acme"]})
+    run = await repo.create(_USER_ID, {"companies": ["acme"]})
     await session.commit()
 
     def _explode(*args, **kwargs) -> list:

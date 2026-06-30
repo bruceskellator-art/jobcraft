@@ -128,11 +128,11 @@ class TestMatchAllJobs:
         llm = LLMClient(session=session, adapter=adapter)
 
         # Act
-        count = await match_all_jobs(session, llm, embed, store, user.id, limit=10)
+        result = await match_all_jobs(session, llm, embed, store, user.id, limit=10)
         await session.commit()
 
         # Assert
-        assert count == 3
+        assert result == {"matched": 3, "failed": 0, "total": 3}
 
     async def test_match_all_jobs_isolates_failing_job(self, session) -> None:
         # Arrange — two jobs; first LLM call raises, second succeeds
@@ -150,11 +150,11 @@ class TestMatchAllJobs:
         llm = LLMClient(session=session, adapter=adapter)
 
         # Act — should not raise; one failure is isolated
-        count = await match_all_jobs(session, llm, embed, store, user.id, limit=10)
+        result = await match_all_jobs(session, llm, embed, store, user.id, limit=10)
         await session.commit()
 
         # Assert — one succeeded, one failed and was skipped
-        assert count == 1
+        assert result == {"matched": 1, "failed": 1, "total": 2}
 
     async def test_match_all_jobs_returns_zero_when_no_jobs(self, session) -> None:
         # Arrange — no jobs seeded
@@ -165,7 +165,52 @@ class TestMatchAllJobs:
         llm = LLMClient(session=session, adapter=adapter)
 
         # Act
-        count = await match_all_jobs(session, llm, embed, store, user.id)
+        result = await match_all_jobs(session, llm, embed, store, user.id)
 
         # Assert
-        assert count == 0
+        assert result == {"matched": 0, "failed": 0, "total": 0}
+
+    async def test_match_all_jobs_only_unscored_skips_already_matched(self, session) -> None:
+        # Arrange — two jobs; pre-score the first via match_job.
+        user, _ = await _seed(session)
+        jobs = [_make_job(f"Job {i}") for i in range(2)]
+        for job in jobs:
+            session.add(job)
+        await session.flush()
+
+        embed = FakeEmbeddingAdapter(dim=64)
+        store = InMemoryVectorStore()
+        pre = LLMClient(session=session, adapter=MockAdapter(responses=[_MATCH_JSON]))
+        await match_job(session, pre, embed, store, user.id, jobs[0])
+        await session.commit()
+
+        # Act — only_unscored (default) should match just the remaining job.
+        llm = LLMClient(session=session, adapter=MockAdapter(responses=[_MATCH_JSON]))
+        result = await match_all_jobs(session, llm, embed, store, user.id, limit=10)
+        await session.commit()
+
+        # Assert — one job attempted (the unscored one).
+        assert result == {"matched": 1, "failed": 0, "total": 1}
+
+    async def test_match_all_jobs_only_unscored_false_rescores_all(self, session) -> None:
+        # Arrange — one job, already scored.
+        user, _ = await _seed(session)
+        job = _make_job("Rescored")
+        session.add(job)
+        await session.flush()
+
+        embed = FakeEmbeddingAdapter(dim=64)
+        store = InMemoryVectorStore()
+        pre = LLMClient(session=session, adapter=MockAdapter(responses=[_MATCH_JSON]))
+        await match_job(session, pre, embed, store, user.id, job)
+        await session.commit()
+
+        # Act — only_unscored=False re-attempts the already-scored job.
+        llm = LLMClient(session=session, adapter=MockAdapter(responses=[_MATCH_JSON]))
+        result = await match_all_jobs(
+            session, llm, embed, store, user.id, limit=10, only_unscored=False
+        )
+        await session.commit()
+
+        # Assert
+        assert result == {"matched": 1, "failed": 0, "total": 1}

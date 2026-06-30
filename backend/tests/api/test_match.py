@@ -115,11 +115,12 @@ async def match_client(session: AsyncSession):
         return llm_client
 
     def _fake_source_factory():
-        def _build(greenhouse_boards, lever_companies, mcf_keywords=None, linkedin_keywords=None):
+        def _build(query, companies=None):
             sources = []
-            for board in greenhouse_boards:
-                sources.append(_FakeSource(f"greenhouse:{board}", [_RAW_JOB]))
+            for company in companies or []:
+                sources.append(_FakeSource(f"greenhouse:{company}", [_RAW_JOB]))
             return sources
+
         return _build
 
     from app.deps import get_source_factory
@@ -131,9 +132,7 @@ async def match_client(session: AsyncSession):
     application.dependency_overrides[get_llm_client] = _override_llm
     application.dependency_overrides[get_source_factory] = _fake_source_factory
 
-    async with AsyncClient(
-        transport=ASGITransport(app=application), base_url="http://test"
-    ) as ac:
+    async with AsyncClient(transport=ASGITransport(app=application), base_url="http://test") as ac:
         yield ac, user
 
     application.dependency_overrides.clear()
@@ -151,9 +150,9 @@ class TestGetJobMatch:
         # Seed a job via scrape
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
-        jobs = (await client.get("/api/jobs")).json()
+        jobs = (await client.get("/api/jobs")).json()["items"]
         job_id = jobs[0]["id"]
 
         # Act
@@ -181,9 +180,9 @@ class TestGetJobMatch:
 
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
-        jobs = (await client.get("/api/jobs")).json()
+        jobs = (await client.get("/api/jobs")).json()["items"]
         job_id = jobs[0]["id"]
 
         r1 = await client.get(f"/api/jobs/{job_id}/match")
@@ -207,7 +206,7 @@ class TestRunMatch:
         # Seed one job
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
 
         # Act
@@ -216,8 +215,9 @@ class TestRunMatch:
         # Assert
         assert response.status_code == 200
         body = response.json()
-        assert "matched" in body
         assert body["matched"] == 1
+        assert body["failed"] == 0
+        assert body["total"] == 1
 
     async def test_run_with_no_jobs_returns_zero(self, match_client) -> None:
         client, _ = match_client
@@ -226,6 +226,7 @@ class TestRunMatch:
 
         assert response.status_code == 200
         assert response.json()["matched"] == 0
+        assert response.json()["total"] == 0
 
     async def test_run_uses_default_limit(self, match_client) -> None:
         client, _ = match_client
@@ -248,14 +249,14 @@ class TestListJobsWithMatch:
 
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
 
         # No match run yet
         response = await client.get("/api/jobs")
 
         assert response.status_code == 200
-        jobs = response.json()
+        jobs = response.json()["items"]
         assert len(jobs) == 1
         assert jobs[0]["match"] is None
 
@@ -264,14 +265,14 @@ class TestListJobsWithMatch:
 
         await client.post(
             "/api/jobs/scrape",
-            json={"greenhouse_boards": ["acme"], "lever_companies": [], "filters": {}},
+            json={"companies": ["acme"], "filters": {}},
         )
         await client.post("/api/match/run", json={"limit": 50})
 
         response = await client.get("/api/jobs")
 
         assert response.status_code == 200
-        jobs = response.json()
+        jobs = response.json()["items"]
         assert len(jobs) == 1
         match = jobs[0]["match"]
         assert match is not None
