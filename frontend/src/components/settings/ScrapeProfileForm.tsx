@@ -1,67 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+
 import type { ScrapeProfileConfig } from '@/types/settings'
+import { listCuratedCompanies } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { CompanyMultiSelect } from '@/components/settings/CompanyMultiSelect'
 
-interface TagInputProps {
-  label: string
-  hint?: string
-  values: string[]
-  onChange: (values: string[]) => void
-}
-
-function TagInput({ label, hint, values, onChange }: TagInputProps) {
-  const [draft, setDraft] = useState('')
-
-  function commit() {
-    const trimmed = draft.trim().replace(/,+$/, '')
-    if (!trimmed) return
-    const next = trimmed.split(',').map(s => s.trim()).filter(Boolean)
-    const unique = next.filter(v => !values.includes(v))
-    if (unique.length > 0) onChange([...values, ...unique])
-    setDraft('')
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault()
-      commit()
-    } else if (e.key === 'Backspace' && draft === '' && values.length > 0) {
-      onChange(values.slice(0, -1))
-    }
-  }
-
-  return (
-    <div>
-      <label className="block text-xs text-muted-foreground mb-1">{label}</label>
-      <div className="flex flex-wrap gap-1 border border-border rounded-lg px-2 py-1.5 min-h-[36px] focus-within:ring-1 focus-within:ring-border">
-        {values.map((v, i) => (
-          <span key={i} className="inline-flex items-center gap-1 bg-muted text-foreground text-xs rounded px-2 py-0.5">
-            {v}
-            <button
-              type="button"
-              onClick={() => onChange(values.filter((_, j) => j !== i))}
-              className="text-muted-foreground hover:text-foreground leading-none"
-              aria-label={`Remove ${v}`}
-            >
-              ×
-            </button>
-          </span>
-        ))}
-        <input
-          type="text"
-          value={draft}
-          onChange={e => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={commit}
-          placeholder={values.length === 0 ? 'Type and press Enter' : ''}
-          className="flex-1 min-w-[120px] text-xs outline-none bg-transparent placeholder:text-muted-foreground"
-        />
-      </div>
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  )
-}
+const MIN_LOOKBACK_DAYS = 1
+const MAX_LOOKBACK_DAYS = 90
 
 interface ScrapeProfileFormProps {
   initial: ScrapeProfileConfig
@@ -71,97 +20,160 @@ interface ScrapeProfileFormProps {
   isRunning: boolean
 }
 
-export function ScrapeProfileForm({ initial, onSave, onRun, isSaving, isRunning }: ScrapeProfileFormProps) {
+export function ScrapeProfileForm({
+  initial,
+  onSave,
+  onRun,
+  isSaving,
+  isRunning,
+}: ScrapeProfileFormProps) {
   const [config, setConfig] = useState<ScrapeProfileConfig>(initial)
+  const [companies, setCompanies] = useState<string[]>([])
 
-  function update<K extends keyof ScrapeProfileConfig>(key: K, value: ScrapeProfileConfig[K]) {
+  // Resync local state when the profile is re-fetched/saved upstream. Keyed on
+  // the identity of `initial`, so a new profile object (e.g. after a save)
+  // reflects here without clobbering edits on unrelated re-renders.
+  useEffect(() => {
+    setConfig(initial)
+  }, [initial])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    listCuratedCompanies(controller.signal)
+      .then(setCompanies)
+      .catch(() => {
+        // Curated list is optional; the rest of the form still works without it.
+      })
+    return () => controller.abort()
+  }, [])
+
+  function update<K extends keyof ScrapeProfileConfig>(
+    key: K,
+    value: ScrapeProfileConfig[K]
+  ) {
     setConfig(prev => ({ ...prev, [key]: value }))
   }
 
-  async function handleRun() {
-    await onRun(config)
+  function handleLookbackChange(raw: string) {
+    const parsed = Number(raw)
+    if (Number.isNaN(parsed)) return
+    const clamped = Math.min(MAX_LOOKBACK_DAYS, Math.max(MIN_LOOKBACK_DAYS, parsed))
+    update('posted_within_days', clamped)
   }
 
   return (
-    <div className="space-y-3">
-      <TagInput
-        label="LinkedIn keywords"
-        hint="Job title keywords to search LinkedIn — e.g. Forward Deployed Engineer, AI Engineer"
-        values={config.linkedin_keywords}
-        onChange={v => update('linkedin_keywords', v)}
-      />
-      <TagInput
-        label="MCF keywords"
-        hint="Job title keywords to search MyCareersFuture — e.g. Forward Deployed Engineer, AI Engineer"
-        values={config.mcf_keywords}
-        onChange={v => update('mcf_keywords', v)}
-      />
-      <TagInput
-        label="Greenhouse boards"
-        hint="Company board tokens to scrape — e.g. anthropic, stripe, grab (not job titles)"
-        values={config.greenhouse_boards}
-        onChange={v => update('greenhouse_boards', v)}
-      />
-      <TagInput
-        label="Lever companies"
-        hint="Company slugs to scrape — e.g. openai, figma, vercel (not job titles)"
-        values={config.lever_companies}
-        onChange={v => update('lever_companies', v)}
-      />
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <label
+          htmlFor="scrape-query"
+          className="block text-xs font-medium text-muted-foreground"
+        >
+          Search query
+        </label>
+        <Input
+          id="scrape-query"
+          value={config.query}
+          onChange={e => update('query', e.target.value)}
+          placeholder="e.g. Forward Deployed Engineer"
+        />
+        <p className="text-xs text-muted-foreground">
+          Searches LinkedIn + MyCareersFuture.
+        </p>
+      </div>
 
-      <div className="flex items-center gap-4 pt-1">
-        <div>
-          <label className="block text-xs text-muted-foreground mb-1">Lookback days</label>
-          <input
+      <div className="space-y-1.5">
+        <label className="block text-xs font-medium text-muted-foreground">
+          Target companies <span className="font-normal">(optional)</span>
+        </label>
+        <CompanyMultiSelect
+          options={companies}
+          selected={config.companies}
+          onChange={v => update('companies', v)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Also scrape these companies&apos; Greenhouse/Lever boards.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-6">
+        <div className="space-y-1.5">
+          <label
+            htmlFor="scrape-lookback"
+            className="block text-xs font-medium text-muted-foreground"
+          >
+            Lookback days
+          </label>
+          <Input
+            id="scrape-lookback"
             type="number"
-            min={1}
-            max={90}
+            min={MIN_LOOKBACK_DAYS}
+            max={MAX_LOOKBACK_DAYS}
             value={config.posted_within_days}
-            onChange={e => update('posted_within_days', Math.min(90, Math.max(1, Number(e.target.value))))}
-            className="w-20 border border-border rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-border"
+            onChange={e => handleLookbackChange(e.target.value)}
+            className="w-24"
           />
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pt-4">
-          <input
-            type="checkbox"
+        <label
+          htmlFor="scrape-extract"
+          className="flex cursor-pointer items-center gap-2 pb-1.5 text-xs text-muted-foreground"
+        >
+          <Checkbox
+            id="scrape-extract"
             checked={config.extract}
-            onChange={e => update('extract', e.target.checked)}
-            className="rounded border-border"
+            onCheckedChange={checked => update('extract', checked)}
+            className="cursor-pointer"
           />
-          Extract with AI
-          <span className="text-muted-foreground">(slower — populates salary, seniority, tech stack)</span>
+          <span>Extract with AI</span>
+          <span className="text-muted-foreground">
+            (slower — populates salary, seniority, tech stack)
+          </span>
         </label>
       </div>
 
       <div className="flex gap-2 pt-1">
-        <button
+        <Button
           type="button"
+          variant="default"
           disabled={isSaving}
-          onClick={() => onSave(config)}
-          className="px-3 py-1.5 text-xs font-medium bg-foreground text-white rounded-lg hover:bg-foreground/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => void onSave(config)}
+          className="cursor-pointer"
         >
           {isSaving ? 'Saving…' : 'Save'}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="outline"
           disabled={isRunning}
-          onClick={handleRun}
-          className="px-3 py-1.5 text-xs font-medium border border-border text-foreground rounded-lg hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          onClick={() => void onRun(config)}
+          className="cursor-pointer"
         >
           {isRunning ? (
             <>
-              <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              <svg className="size-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                />
               </svg>
               Running…
             </>
-          ) : 'Run scrape now'}
-        </button>
+          ) : (
+            'Run scrape now'
+          )}
+        </Button>
       </div>
 
-      <p className="text-xs text-muted-foreground pt-1">
+      <p className="pt-1 text-xs text-muted-foreground">
         Scraping runs in the background — watch live progress on the Activity page.
       </p>
     </div>

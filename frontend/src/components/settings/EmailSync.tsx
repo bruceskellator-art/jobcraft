@@ -10,6 +10,8 @@ import {
   syncEmailAccount,
 } from '@/lib/api'
 import { relativeTime } from '@/lib/relativeTime'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -140,20 +142,24 @@ function AccountRow({
       <td className="px-4 py-3 text-xs text-muted-foreground num">{lastSynced}</td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
-          <button
-            className="btn btn-ghost text-xs"
+          <Button
+            variant="ghost"
+            size="xs"
+            className="cursor-pointer"
             onClick={() => { void onSync(account.id) }}
             disabled={isSyncing || isDisconnecting}
           >
             {isSyncing ? 'Syncing…' : 'Sync now'}
-          </button>
-          <button
-            className="btn btn-ghost text-xs text-red-600 hover:bg-red-50"
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
+            className="cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700"
             onClick={handleDisconnectClick}
             disabled={isSyncing || isDisconnecting}
           >
             {isDisconnecting ? 'Disconnecting…' : 'Disconnect'}
-          </button>
+          </Button>
         </div>
       </td>
     </tr>
@@ -219,9 +225,8 @@ function ConnectForm({ onConnect, isConnecting }: ConnectFormProps) {
           <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
             Email address
           </label>
-          <input
+          <Input
             type="email"
-            className="w-full border border-border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -232,9 +237,8 @@ function ConnectForm({ onConnect, isConnecting }: ConnectFormProps) {
           <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
             Access token
           </label>
-          <input
+          <Input
             type="password"
-            className="w-full border border-border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
             placeholder="ya29.…"
             value={accessToken}
             onChange={(e) => setAccessToken(e.target.value)}
@@ -244,13 +248,14 @@ function ConnectForm({ onConnect, isConnecting }: ConnectFormProps) {
       </div>
 
       <div className="flex justify-end">
-        <button
+        <Button
           type="submit"
-          className="btn btn-primary text-xs"
+          size="sm"
+          className="cursor-pointer"
           disabled={isConnecting}
         >
           {isConnecting ? 'Connecting…' : 'Connect account'}
-        </button>
+        </Button>
       </div>
     </form>
   )

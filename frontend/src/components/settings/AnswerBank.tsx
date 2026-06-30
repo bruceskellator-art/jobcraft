@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import type { AnswerBankItem } from '@/types/apply'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 
 interface AnswerBankProps {
   answers: AnswerBankItem[]
@@ -67,13 +69,15 @@ export function AnswerBank({ answers, onApprove, onCreate }: AnswerBankProps) {
               ) : (
                 <>
                   <span className="toggle-off">draft · needs approval</span>
-                  <button
-                    className="btn btn-ghost text-xs"
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="cursor-pointer"
                     onClick={() => void handleApprove(item.id)}
                     disabled={approvingId === item.id}
                   >
                     {approvingId === item.id ? 'Approving…' : 'Approve'}
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
@@ -85,9 +89,9 @@ export function AnswerBank({ answers, onApprove, onCreate }: AnswerBankProps) {
         <div className="rounded-lg border border-border bg-muted p-3 space-y-2">
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Question</label>
-            <textarea
+            <Textarea
               rows={2}
-              className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="resize-none"
               placeholder="e.g. Why do you want to work here?"
               value={question}
               onChange={e => setQuestion(e.target.value)}
@@ -95,37 +99,42 @@ export function AnswerBank({ answers, onApprove, onCreate }: AnswerBankProps) {
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Answer</label>
-            <textarea
+            <Textarea
               rows={3}
-              className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="resize-none"
               placeholder="Your answer…"
               value={answer}
               onChange={e => setAnswer(e.target.value)}
             />
           </div>
           <div className="flex gap-2">
-            <button
-              className="btn btn-primary text-xs"
+            <Button
+              size="sm"
+              className="cursor-pointer"
               onClick={() => void handleCreate()}
               disabled={isSaving || !question.trim() || !answer.trim()}
             >
               {isSaving ? 'Saving…' : 'Save'}
-            </button>
-            <button
-              className="btn btn-ghost text-xs"
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="cursor-pointer"
               onClick={() => { setShowForm(false); setQuestion(''); setAnswer('') }}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <button
-          className="btn btn-ghost text-xs"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="cursor-pointer"
           onClick={() => setShowForm(true)}
         >
           + Add answer
-        </button>
+        </Button>
       )}
     </div>
   )

@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import type { AutopilotConfig, AutopilotMode } from '@/types/apply'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -63,27 +65,25 @@ export function AutopilotForm({ initial, onSave, isSaving }: AutopilotFormProps)
           <label className="block text-xs font-medium text-muted-foreground mb-1">
             Min confidence ({Math.round(minConfidence * 100)}%)
           </label>
-          <input
+          <Input
             type="number"
             min={0}
             max={1}
             step={0.05}
             value={minConfidence}
             onChange={e => setMinConfidence(parseFloat(e.target.value))}
-            className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
 
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">Daily cap</label>
-          <input
+          <Input
             type="number"
             min={1}
             max={500}
             step={1}
             value={dailyCap}
             onChange={e => setDailyCap(parseInt(e.target.value, 10))}
-            className="w-full border border-border rounded-lg px-3 py-1.5 text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <p className="text-xs text-muted-foreground mt-1">Max applications submitted per day.</p>
         </div>
@@ -93,13 +93,13 @@ export function AutopilotForm({ initial, onSave, isSaving }: AutopilotFormProps)
         <p className="text-xs text-red-600">{saveError}</p>
       )}
 
-      <button
-        className="btn btn-primary"
+      <Button
+        className="cursor-pointer"
         onClick={() => void handleSave()}
         disabled={isSaving}
       >
         {isSaving ? 'Saving…' : 'Save autopilot settings'}
-      </button>
+      </Button>
     </div>
   )
 }

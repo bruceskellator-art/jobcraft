@@ -27,7 +27,7 @@ const SOURCES = [
   { name: 'LinkedIn', key: 'linkedin', trusted: true },
   { name: 'Greenhouse', key: 'greenhouse', trusted: true },
   { name: 'Lever', key: 'lever', trusted: true },
-  { name: 'MCF', key: 'mcf', trusted: false },
+  { name: 'MyCareersFuture', key: 'mycareersfuture', trusted: false },
 ]
 
 export default function SettingsPage() {
