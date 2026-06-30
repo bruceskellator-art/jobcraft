@@ -42,7 +42,11 @@ export function useEntrance<T extends HTMLElement = HTMLDivElement>({
 
   useGSAP(
     () => {
-      const targets = gsap.utils.toArray<HTMLElement>(selector)
+      // Scope the query to THIS container — otherwise every mounted useEntrance
+      // grabs all `[data-animate]` on the page and they fight, producing the
+      // haphazard, out-of-order jerk. The useGSAP `scope` only governs cleanup.
+      if (!container.current) return
+      const targets = gsap.utils.toArray<HTMLElement>(selector, container.current)
       if (targets.length === 0) return
       entrance(targets, { delay, stagger, y })
     },

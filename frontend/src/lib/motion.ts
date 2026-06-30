@@ -14,11 +14,14 @@ gsap.registerPlugin(useGSAP)
  */
 export const MOTION = {
   durationFast: 0.3,
-  duration: 0.4,
-  durationSlow: 0.5,
-  ease: 'power2.out',
-  stagger: 0.06,
-  slideDistance: 12,
+  duration: 0.45,
+  durationSlow: 0.55,
+  ease: 'power3.out',
+  /** Default stagger for cards/panels — gives a clear, ordered cascade. */
+  stagger: 0.07,
+  /** Tighter stagger for dense lists / table rows so reveal feels snappy. */
+  staggerTight: 0.025,
+  slideDistance: 14,
 } as const
 
 /**
@@ -69,6 +72,7 @@ export function entrance(
     delay,
     stagger,
     ease: MOTION.ease,
+    overwrite: 'auto',
     clearProps: 'opacity,transform',
   })
 }
